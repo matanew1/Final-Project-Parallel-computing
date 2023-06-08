@@ -13,6 +13,4 @@ typedef struct Point {
 #endif
 
 void test(int *data, int n);
-// void checkProximityCriteria(const struct Point* points, double* tValues, int N, int K, double D, int* results, int* resultsCount);
-// int satisfyProximityCriteria(const struct Point* p1, const struct Point* p2, const struct Point* p3, double t, int K, double D);
-int computeOnGPU(int *tCount, int *myPointsCount);
+int computeOnGPU(int *N, int *K, double *D, int *tCount, int *myPointsCount, double *tValues, int *results, int *resultsCount, int *maxResults, Point *myPoints);

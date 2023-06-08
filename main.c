@@ -32,11 +32,6 @@ int main(int argc, char *argv[])
    int N, K, tCount;
    double D;
    Point *points = NULL;
-   points = (Point *)malloc(N * sizeof(Point));
-   if (!points)
-   {
-      printf("malloc failed");
-   }
 
    if (rank == 0)
    {
@@ -48,11 +43,30 @@ int main(int argc, char *argv[])
          return 1;
       }
 
-      fscanf(file, "%d %d %lf %d\n", &N, &K, &D, &tCount);
+      if (fscanf(file, "%d %d %lf %d\n", &N, &K, &D, &tCount) != 4)
+      {
+         fprintf(stderr, "Failed to read required values from input file.\n");
+         fclose(file);
+         MPI_Finalize();
+         return 1;
+      }
+      points = (Point *)malloc(N * sizeof(Point));
+      if (!points)
+      {
+         fprintf(stderr, "Failed to allocate points.\n");
+         MPI_Finalize();
+         return 1;
+      }
 
       for (int i = 0; i < N; ++i)
       {
-         fscanf(file, "%d %lf %lf %lf %lf\n", &points[i].id, &points[i].x1, &points[i].x2, &points[i].a, &points[i].b);
+         if (fscanf(file, "%d %lf %lf %lf %lf\n", &points[i].id, &points[i].x1, &points[i].x2, &points[i].a, &points[i].b) != 5)
+         {
+            fprintf(stderr, "Failed to read point data from input file.\n");
+            fclose(file);
+            MPI_Finalize();
+            return 1;
+         }
       }
 
       fclose(file);
@@ -68,6 +82,17 @@ int main(int argc, char *argv[])
    MPI_Type_contiguous(sizeof(Point), MPI_BYTE, &MPI_POINT);
    MPI_Type_commit(&MPI_POINT);
 
+   if (rank != 0)
+   {
+      points = (Point *)malloc(N * sizeof(Point));
+      if (!points)
+      {
+         fprintf(stderr, "Failed to allocate points.\n");
+         MPI_Finalize();
+         return 1;
+      }
+   }
+
    MPI_Bcast(points, N, MPI_POINT, 0, MPI_COMM_WORLD);
 
    int pointsPerProcess = N / size;
@@ -76,9 +101,7 @@ int main(int argc, char *argv[])
    int myPointsOffset = rank * pointsPerProcess + ((rank < remainingPoints) ? rank : remainingPoints);
 
    Point *myPoints = (Point *)malloc(myPointsCount * sizeof(Point));
-   MPI_Scatter(points, myPointsCount, MPI_POINT,
-               myPoints, myPointsCount, MPI_POINT,
-               0, MPI_COMM_WORLD);
+   MPI_Scatter(points, myPointsCount, MPI_POINT, myPoints, myPointsCount, MPI_POINT, 0, MPI_COMM_WORLD);
 
    double *tValues = (double *)malloc((tCount + 1) * sizeof(double));
 
@@ -93,36 +116,19 @@ int main(int argc, char *argv[])
    int *results = (int *)malloc(maxResults * 3 * sizeof(int));
    int resultsCount = 0;
 
-   // computeOnGPU(&tCount, &myPointsCount);
-
-   // int blockSize = 256;
-   // int numBlocks = (myPointsCount + blockSize - 1) / blockSize;
-   // dim3 gridDim(numBlocks, tCount + 1);
-   // dim3 blockDim(blockSize);
-
-   // Point *dPoints;
-   // double *dTValues;
-   // int *dResults;
-   // int *dResultsCount;
-
-   // cudaMalloc(&dPoints, myPointsCount * sizeof(Point));
-   // cudaMalloc(&dTValues, (tCount + 1) * sizeof(double));
-   // cudaMalloc(&dResults, maxResults * 3 * sizeof(int));
-   // cudaMalloc(&dResultsCount, sizeof(int));
-
-   // cudaMemcpy(dPoints, myPoints, myPointsCount * sizeof(Point), cudaMemcpyHostToDevice);
-   // cudaMemcpy(dTValues, tValues, (tCount + 1) * sizeof(double), cudaMemcpyHostToDevice);
-   // cudaMemset(dResultsCount, 0, sizeof(int));
-
-   // checkProximityCriteria<<<gridDim, blockDim>>>(dPoints, dTValues, myPointsCount, K, D, dResults, dResultsCount);
-
-   // cudaMemcpy(&resultsCount, dResultsCount, sizeof(int), cudaMemcpyDeviceToHost);
-   // cudaMemcpy(results, dResults, resultsCount * 3 * sizeof(int), cudaMemcpyDeviceToHost);
-
-   // cudaFree(dPoints);
-   // cudaFree(dTValues);
-   // cudaFree(dResults);
-   // cudaFree(dResultsCount);
+   /*
+      N = 4
+      K = 2
+      D = 1.23
+      tCount = 100
+      myPointsCount = 2, 2 points for 1 process
+      points = array of Point struct
+      results = empty array of results 
+      resultsCount = 0
+      maxResults = 3
+      myPoints = array point of each process
+   */
+   computeOnGPU(&N, &K, &D, &tCount, &myPointsCount, tValues, results, &resultsCount, &maxResults, myPoints);
 
    // int *recvCounts = NULL;
    // int *displacements = NULL;
@@ -198,6 +204,7 @@ int main(int argc, char *argv[])
    free(myPoints);
    free(tValues);
    free(results);
+   MPI_Type_free(&MPI_POINT);
    // free(recvCounts);
    // free(displacements);
    // free(allResults);
