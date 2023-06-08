@@ -1,0 +1,10 @@
+
+mpiCudaOpemMP:4983 terminated with signal 11 at PC=7f96b73d3235 SP=7ffdbe0c0f10.  Backtrace:
+/lib/x86_64-linux-gnu/libmpich.so.12(+0x1d7235)[0x7f96b73d3235]
+/lib/x86_64-linux-gnu/libmpich.so.12(+0x1d724b)[0x7f96b73d324b]
+/lib/x86_64-linux-gnu/libmpich.so.12(+0x1d724b)[0x7f96b73d324b]
+/lib/x86_64-linux-gnu/libmpich.so.12(+0x1d724b)[0x7f96b73d324b]
+/lib/x86_64-linux-gnu/libmpich.so.12(+0x1d724b)[0x7f96b73d324b]
+/lib/x86_64-linux-gnu/libmpich.so.12(+0x1d7259)[0x7f96b73d3259]
+/lib/x86_64-linux-gnu/libmpich.so.12(+0x1d7259)[0x7f96b73d3259]
+/lib/x86_64-linux-gnu/libmpich.so.12(+0x233ea9)[0x7f96b742fea9]
