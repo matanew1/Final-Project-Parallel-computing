@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
    int *results = (int *)malloc(maxResults * 3 * sizeof(int));
    int resultsCount = 0;
 
-   computeOnGPU(&tCount, &myPointsCount);
+   // computeOnGPU(&tCount, &myPointsCount);
 
    // int blockSize = 256;
    // int numBlocks = (myPointsCount + blockSize - 1) / blockSize;
@@ -195,7 +195,7 @@ int main(int argc, char *argv[])
    // }
 
    free(points);
-   // free(myPoints);
+   free(myPoints);
    free(tValues);
    free(results);
    // free(recvCounts);
