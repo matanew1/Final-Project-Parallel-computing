@@ -32,6 +32,7 @@ int main(int argc, char *argv[])
    int N, K, tCount;
    double D;
    Point *points = NULL;
+   double *tValues = (double *)malloc((tCount) * sizeof(double));
 
    if (rank == 0)
    {
@@ -82,53 +83,43 @@ int main(int argc, char *argv[])
    MPI_Type_contiguous(sizeof(Point), MPI_BYTE, &MPI_POINT);
    MPI_Type_commit(&MPI_POINT);
 
-   if (rank != 0)
-   {
-      points = (Point *)malloc(N * sizeof(Point));
-      if (!points)
-      {
-         fprintf(stderr, "Failed to allocate points.\n");
-         MPI_Finalize();
-         return 1;
-      }
-   }
-
-   MPI_Bcast(points, N, MPI_POINT, 0, MPI_COMM_WORLD);
-
-   int pointsPerProcess = N / size;
-   int remainingPoints = N % size;
-   int myPointsCount = (rank < remainingPoints) ? pointsPerProcess + 1 : pointsPerProcess;
-   int myPointsOffset = rank * pointsPerProcess + ((rank < remainingPoints) ? rank : remainingPoints);
-
-   Point *myPoints = (Point *)malloc(myPointsCount * sizeof(Point));
-   MPI_Scatter(points, myPointsCount, MPI_POINT, myPoints, myPointsCount, MPI_POINT, 0, MPI_COMM_WORLD);
-
-   double *tValues = (double *)malloc((tCount + 1) * sizeof(double));
-
-// calculate all t points
+   // calculate all t points
 #pragma omp parallel for
    for (int i = 0; i <= tCount; ++i)
    {
       tValues[i] = 2.0 * i / tCount - 1.0;
    }
-
    int maxResults = 3; // Maximum number of results to find
    int *results = (int *)malloc(maxResults * 3 * sizeof(int));
    int resultsCount = 0;
+
+   int tPointsPerProcess = tCount / size;
+   int remainingTPoints = tCount % size;
+   int myTPointsCount = (rank < remainingTPoints) ? tPointsPerProcess + 1 : tPointsPerProcess;
+   int myTPointsOffset = rank * tPointsPerProcess + ((rank < remainingTPoints) ? rank : remainingTPoints);
+
+   double *myTPoints = (double *)malloc(myTPointsCount * sizeof(double));
+   MPI_Scatter(tValues, myTPointsCount, MPI_INT, myTPoints, myTPointsCount, MPI_INT, 0, MPI_COMM_WORLD);
+
+   printf("rank = %d dount=%d offset=%d\n",rank,myTPointsCount,myTPointsOffset);
+   for(int i = 0; i <)
+   
+
+
 
    /*
       N = 4
       K = 2
       D = 1.23
       tCount = 100
-      myPointsCount = 2, 2 points for 1 process
+      myTPointsCount = 2, 2 points for 1 process
       points = array of Point struct
       results = empty array of results 
       resultsCount = 0
       maxResults = 3
-      myPoints = array point of each process
+      myTPoints = array point of each process
    */
-   computeOnGPU(&N, &K, &D, &tCount, &myPointsCount, tValues, results, &resultsCount, &maxResults, myPoints);
+   computeOnGPU(&N, &K, &D, &tCount, &myTPointsCount, tValues, results, &resultsCount, &maxResults, myTPoints);
 
    // int *recvCounts = NULL;
    // int *displacements = NULL;
@@ -148,9 +139,9 @@ int main(int argc, char *argv[])
 
    //    for (int i = 0; i < size; ++i)
    //    {
-   //       int pointsCount = (i < remainingPoints) ? pointsPerProcess + 1 : pointsPerProcess;
+   //       int pointsCount = (i < remainingTPoints) ? tPointsPerProcess + 1 : tPointsPerProcess;
    //       recvCounts[i] = pointsCount * maxResults;
-   //       displacements[i] = i * pointsPerProcess + ((i < remainingPoints) ? i : remainingPoints);
+   //       displacements[i] = i * tPointsPerProcess + ((i < remainingTPoints) ? i : remainingTPoints);
 
    //       allResultsCounts[i] = recvCounts[i];
    //       allResultsDispls[i] = displacements[i] * 3;
@@ -201,7 +192,7 @@ int main(int argc, char *argv[])
    // }
 
    free(points);
-   free(myPoints);
+   free(myTPoints);
    free(tValues);
    free(results);
    MPI_Type_free(&MPI_POINT);

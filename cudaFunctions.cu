@@ -18,10 +18,9 @@ __device__ int satisfyProximityCriteria(const Point* p1, const Point* p2, const 
     return (dist12 < *D && dist13 < *D && dist23 < *D);
 }
 
-__global__ void checkProximityCriteria(const Point *points, double *tValues, int *N, int *K, double *D,int *results, int *resultsCount){
+__global__ void checkProximityCriteria(const Point *points, double *tValues, int N, int K, double D,int *results, int *resultsCount){
     int idx = blockIdx.x * blockDim.x + threadIdx.x; // point idx
-    printf("idx = %d\n", idx);
-    if (idx < *N)
+    if (idx < N)
     {
         double t = tValues[blockIdx.y];
         // printf("[%d] t=[%d]\n",idx,t);
@@ -53,6 +52,7 @@ int computeOnGPU(int *N, int *K, double *D, int *tCount, int *myPointsCount, dou
 
     int blocksPerGrid = (*myPointsCount + BLOCK_SIZE - 1) / BLOCK_SIZE; 
     int threadsPerBlock = BLOCK_SIZE;
+    // printf("%d  -  [%d] %d\n",*myPointsCount,blocksPerGrid, threadsPerBlock);
 
     Point *dPoints;     // point for device
     double *dTValues;   // tValues for device
@@ -91,7 +91,7 @@ int computeOnGPU(int *N, int *K, double *D, int *tCount, int *myPointsCount, dou
         exit(EXIT_FAILURE);
     }
 
-    checkProximityCriteria<<<blocksPerGrid, threadsPerBlock>>>(dPoints, dTValues, N, K, D, dResults, dResultsCount);
+    checkProximityCriteria<<<blocksPerGrid, threadsPerBlock>>>(dPoints, dTValues, *N, *K, *D, dResults, dResultsCount);
 
     // err = cudaMemcpy(&resultsCount, dResultsCount, sizeof(int), cudaMemcpyDeviceToHost);
     // if (err != cudaSuccess){
