@@ -14,21 +14,16 @@ __device__ double calcDistance(const Point* p1, const Point* p2, double* t) {
     return distance;
 }
 
-__global__ void checkProximityCriteria(Point* resultPoints,double* resultT, int* count, Point *points, double *tValues, const int tCount,const int N,const int K, const double D){
+__global__ void checkProximityCriteria(int* count, Point *points, double *tValues, const int tCount,const int N,const int K, const double D){
     int idx = blockIdx.x * blockDim.x + threadIdx.x; // point idx
 
     if (idx < tCount)
-    {
-        
+    {       
         double* t = &(tValues[idx]);
         for (int i = 0; i < N; i++) {
             for(int j = 0; j < N && j != i; j++) {
                 double distance = calcDistance(&points[i], &points[j], t);
-                int resultIdx = atomicAdd(count, 1);
-                if (resultIdx < N * tCount) {
-                    resultPoints[resultIdx] = points[i];
-                    resultT[resultIdx] = *t;
-                }
+                atomicAdd(count, 1);
                 if (*count >= K) {
                     break;
                 }
@@ -46,7 +41,9 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
     int threadsPerBlock = BLOCK_SIZE;
 
     Point *dPoints;     // point for device
-    double *dTValues;   // tValues for device    
+    Point* resultPoints;
+    double *dTValues;   // tValues for device  
+    double* resultT;  
 
     err = cudaMalloc(&dPoints, (*N) * sizeof(Point));
     if (err != cudaSuccess){
@@ -72,59 +69,10 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
 
     int count = 0;
 
-    Point* dResultPoints;  // Result points for device
-    double* dResultT;      // Result t values for device
-
-    err = cudaMalloc(&dResultPoints, MAX_RESULTS * sizeof(Point));
-    if (err != cudaSuccess){
-        fprintf(stderr, "Error in line %d (error code %s)!\n", __LINE__, cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
-    err = cudaMalloc(&dResultT, MAX_RESULTS * sizeof(double));
-    if (err != cudaSuccess){
-        fprintf(stderr, "Error in line %d (error code %s)!\n", __LINE__, cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
-
-    checkProximityCriteria<<<blocksPerGrid, threadsPerBlock>>>(
-        dResultPoints, dResultT, &count, dPoints, dTValues, *tCountSize, *N, *K, *D
-    );
-
-    printf("Count: %d\n", count);
-
-    // Copy the results back to host memory
-    Point* resultPointsHost = (Point*)malloc(MAX_RESULTS * sizeof(Point));
-    double* resultTHost = (double*)malloc(MAX_RESULTS * sizeof(double));
-
-    err = cudaMemcpy(
-        resultPointsHost, dResultPoints, MAX_RESULTS * sizeof(Point), cudaMemcpyDeviceToHost
-    );
-    if (err != cudaSuccess){
-        fprintf(stderr, "Error in line %d (error code %s)!\n", __LINE__, cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
-    err = cudaMemcpy(
-        resultTHost, dResultT, MAX_RESULTS * sizeof(double), cudaMemcpyDeviceToHost
-    );
-    if (err != cudaSuccess){
-        fprintf(stderr, "Error in line %d (error code %s)!\n", __LINE__, cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
-
-    // Print the results
-    printf("Results:\n");
-    for (int i = 0; i < count; i++) {
-        printf("Point %d: (%f, %f), t = %f\n", i + 1, resultPointsHost[i].x, resultPointsHost[i].y, resultTHost[i]);
-    }
-
-    // Free device memory
+    checkProximityCriteria<<<blocksPerGrid, threadsPerBlock>>>(&count, dPoints, dTValues, *tCountSize, *N, *K, *D);
+    printf("Count: %d\n",count);
+    
+    // free device allocation
     cudaFree(dPoints);
     cudaFree(dTValues);
-    cudaFree(dResultPoints);
-    cudaFree(dResultT);
-
-    // Free host memory
-    free(resultPointsHost);
-    free(resultTHost);
 }
-
