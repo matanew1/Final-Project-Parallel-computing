@@ -4,14 +4,6 @@
 #include <stdlib.h>
 #include "myProto.h"
 
-/*
-Simple MPI+OpenMP+CUDA Integration example
-Initially the array of size 4*PART is known for the process 0.
-It sends the half of the array to the process 1.
-Both processes start to increment members of thier members by 1 - partially with OpenMP, partially with CUDA
-The results is send from the process 1 to the process 0, which perform the test to verify that the integration worked properly
-*/
-
 int main(int argc, char *argv[])
 {
    int rank, size;
@@ -32,7 +24,6 @@ int main(int argc, char *argv[])
    int N, K, tCount;
    double D;
    Point *points = NULL;
-   double *tValues = (double *)malloc((tCount) * sizeof(double));
 
    if (rank == 0)
    {
@@ -83,129 +74,49 @@ int main(int argc, char *argv[])
    MPI_Type_contiguous(sizeof(Point), MPI_BYTE, &MPI_POINT);
    MPI_Type_commit(&MPI_POINT);
 
-   // calculate all t points
+   if (rank != 0)
+   {
+      points = (Point *)malloc(N * sizeof(Point));
+      if (!points)
+      {
+         fprintf(stderr, "Failed to allocate points.\n");
+         MPI_Finalize();
+         return 1;
+      }
+   }
+
+   MPI_Bcast(points, N, MPI_POINT, 0, MPI_COMM_WORLD);
+
+   double *tValues = (double*)malloc(tCount*sizeof(double));
+// calculate all t points
 #pragma omp parallel for
    for (int i = 0; i <= tCount; ++i)
    {
       tValues[i] = 2.0 * i / tCount - 1.0;
    }
-   int maxResults = 3; // Maximum number of results to find
-   int *results = (int *)malloc(maxResults * 3 * sizeof(int));
-   int resultsCount = 0;
 
-   int tPointsPerProcess = tCount / size;
-   int remainingTPoints = tCount % size;
+   int mytValuesSize = tCount / size;
+   int remainingTValues = tCount % size;
    int *sendcounts = (int *)malloc(size * sizeof(int));
    int *displs = (int *)malloc(size * sizeof(int));
 
    // Calculate the sendcounts and displacements
    for (int i = 0; i < size; i++) {
-      sendcounts[i] = (i < remainingTPoints) ? tPointsPerProcess + 1 : tPointsPerProcess;
-      displs[i] = i * tPointsPerProcess + ((i < remainingTPoints) ? i : remainingTPoints);
+      sendcounts[i] = (i < remainingTValues) ? mytValuesSize + 1 : mytValuesSize;
+      displs[i] = i * mytValuesSize + ((i < remainingTValues) ? i : remainingTValues);
    }
+   int tCountSize = sendcounts[rank];
+   double *myTValues = (double *)malloc(tCountSize * sizeof(double));
+   MPI_Scatterv(tValues, sendcounts, displs, MPI_DOUBLE, myTValues, tCountSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-   double *myTPoints = (double *)malloc(sendcounts[rank] * sizeof(double));
-   MPI_Scatterv(tValues, sendcounts, displs, MPI_DOUBLE, myTPoints, sendcounts[rank], MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-   printf("rank: %d\n", i);
-   for (int i = 0; i < sendcounts[rank]; i++) {
-      printf(" %f\n", myTPoints[i]);
-   }
-   /*
-      N = 4
-      K = 2
-      D = 1.23
-      tCount = 100
-      myTPointsCount = 2, 2 points for 1 process
-      points = array of Point struct
-      results = empty array of results 
-      resultsCount = 0
-      maxResults = 3
-      myTPoints = array point of each process
-   */
-   computeOnGPU(&N, &K, &D, &tCount, &myTPointsCount, tValues, results, &resultsCount, &maxResults, myTPoints);
-
-   // int *recvCounts = NULL;
-   // int *displacements = NULL;
-   // int *allResults = NULL;
-   // int *allResultsCounts = NULL;
-   // int *allResultsDispls = NULL;
-   // int *allResultsRecvCounts = NULL;
-
-   // if (rank == 0)
-   // {
-   //    recvCounts = (int *)malloc(size * sizeof(int));
-   //    displacements = (int *)malloc(size * sizeof(int));
-
-   //    allResultsCounts = (int *)malloc(size * sizeof(int));
-   //    allResultsDispls = (int *)malloc(size * sizeof(int));
-   //    allResultsRecvCounts = (int *)malloc(size * sizeof(int));
-
-   //    for (int i = 0; i < size; ++i)
-   //    {
-   //       int pointsCount = (i < remainingTPoints) ? tPointsPerProcess + 1 : tPointsPerProcess;
-   //       recvCounts[i] = pointsCount * maxResults;
-   //       displacements[i] = i * tPointsPerProcess + ((i < remainingTPoints) ? i : remainingTPoints);
-
-   //       allResultsCounts[i] = recvCounts[i];
-   //       allResultsDispls[i] = displacements[i] * 3;
-   //       allResultsRecvCounts[i] = allResultsCounts[i] * 3;
-   //    }
-
-   //    int totalCount = 0;
-   //    for (int i = 0; i < size; ++i)
-   //    {
-   //       totalCount += recvCounts[i];
-   //    }
-
-   //    allResults = (int *)malloc(totalCount * sizeof(int));
-   // }
-
-   // MPI_Gatherv(results, resultsCount * 3, MPI_INT,
-   //             allResults, allResultsRecvCounts, allResultsDispls, MPI_INT,
-   //             0, MPI_COMM_WORLD);
-
-   // if (rank == 0)
-   // {
-   //    FILE *file = fopen("output.txt", "w");
-   //    if (!file)
-   //    {
-   //       fprintf(stderr, "Failed to open output file.\n");
-   //       MPI_Finalize();
-   //       return 1;
-   //    }
-
-   //    if (resultsCount == 0)
-   //    {
-   //       fprintf(file, "There were no 3 points found for any t.\n");
-   //    }
-   //    else
-   //    {
-   //       for (int i = 0; i < resultsCount; ++i)
-   //       {
-   //          int p1 = allResults[i * 3];
-   //          int p2 = allResults[i * 3 + 1];
-   //          int p3 = allResults[i * 3 + 2];
-   //          double t = tValues[displacements[i]];
-
-   //          fprintf(file, "Points %d, %d, %d satisfy Proximity Criteria at t = %lf\n", p1, p2, p3, t);
-   //       }
-   //    }
-
-   //    fclose(file);
-   // }
+   computeOnGPU(&N, &K, &D, &tCountSize, myTValues, points);
 
    free(points);
-   free(myTPoints);
    free(tValues);
-   free(results);
    MPI_Type_free(&MPI_POINT);
-   // free(recvCounts);
-   // free(displacements);
-   // free(allResults);
-   // free(allResultsCounts);
-   // free(allResultsDispls);
-   // free(allResultsRecvCounts);
+   free(sendcounts);
+   free(displs);
+   free(myTValues);
 
    MPI_Finalize();
    return 0;
