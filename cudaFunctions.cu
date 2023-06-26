@@ -28,7 +28,8 @@ int idx = blockIdx.x * blockDim.x + threadIdx.x; // point idx
             const Point currentPoint = points[i];
             double x = ((currentPoint.x2- currentPoint.x1) / 2) * sin(currentTValue * M_PI / 2) + ((currentPoint.x2 + currentPoint.x1) / 2);
             double y = currentPoint.a * x + currentPoint.b;
-            printf("Current t = %d  i = %d) point ---> x= %lf y= %lf\n",idx,i,x,y);
+            if(idx == 0)
+                printf("Current t = %d  point = %d) x= %lf y= %lf\n",idx,i,x,y);
                 // if (distance < D) {
                 //     count++;
                 //     if (count >= K) {
