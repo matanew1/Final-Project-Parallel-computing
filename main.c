@@ -109,9 +109,7 @@ int main(int argc, char *argv[])
    double *myTValues = (double *)malloc(tCountSize * sizeof(double));
    MPI_Scatterv(tValues, sendcounts, displs, MPI_DOUBLE, myTValues, tCountSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-   if (rank == 0) {
-      computeOnGPU(&N, &K, &D, &tCountSize, myTValues, points);
-   }
+   computeOnGPU(&N, &K, &D, &tCountSize, myTValues, points);
 
    free(points);
    free(tValues);
