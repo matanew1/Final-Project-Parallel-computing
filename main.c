@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
 
    double *tValues = (double *)malloc((tCount + 1) * sizeof(double));
 
-// calculate all t points of each  p point
+// calculate all t points
 #pragma omp parallel for
    for (int i = 0; i <= tCount; ++i)
    {

@@ -2,7 +2,7 @@
 #include <helper_cuda.h>
 #include "myProto.h"
 
-__device__ int satisfyProximityCriteria(const struct Point* p1, const struct Point* p2, const struct Point* p3, double* t, int *K, double *D) {
+__device__ int satisfyProximityCriteria(const Point* p1, const Point* p2, const Point* p3, double* t, int *K, double *D) {
     double x1 = ((p1->x2 - p1->x1) / 2) * sin(*t * M_PI / 2) + (p1->x2 + p1->x1) / 2;
     double x2 = ((p2->x2 - p2->x1) / 2) * sin(*t * M_PI / 2) + (p2->x2 + p2->x1) / 2;
     double x3 = ((p3->x2 - p3->x1) / 2) * sin(*t * M_PI / 2) + (p3->x2 + p3->x1) / 2;
@@ -18,38 +18,41 @@ __device__ int satisfyProximityCriteria(const struct Point* p1, const struct Poi
     return (dist12 < *D && dist13 < *D && dist23 < *D);
 }
 
-__global__ void checkProximityCriteria(const Point *points, double *tValues, int *N, int *K, double *D,
-                                       int *results, int *resultsCount)
-{
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    
+__global__ void checkProximityCriteria(const Point *points, double *tValues, int *N, int *K, double *D,int *results, int *resultsCount){
+    int idx = blockIdx.x * blockDim.x + threadIdx.x; // point idx
+    printf("idx = %d\n", idx);
     if (idx < *N)
     {
         double t = tValues[blockIdx.y];
-
-        for (int j = idx + 1; j < *N - 1; ++j)
-        {
-            for (int k = j + 1; k < *N; ++k)
-            {
-                // if (satisfyProximityCriteria(&points[idx], &points[j], &points[k], &t, K, D)) {
-                //     int resIdx = atomicAdd(resultsCount, 1);
-                //     results[resIdx * 3] = points[idx].id;
-                //     results[resIdx * 3 + 1] = points[j].id;
-                //     results[resIdx * 3 + 2] = points[k].id;
-                // }
-            }
-        }
+        // printf("[%d] t=[%d]\n",idx,t);
+        // for (int j = idx + 1; j < *N - 1; ++j)
+        // {
+        //     for (int k = j + 1; k < *N; ++k)
+        //     {
+        //         // if (satisfyProximityCriteria(&points[idx], &points[j], &points[k], &t, K, D)) {
+        //         //     int resIdx = atomicAdd(resultsCount, 1);
+        //         //     results[resIdx * 3] = points[idx].id;
+        //         //     results[resIdx * 3 + 1] = points[j].id;
+        //         //     results[resIdx * 3 + 2] = points[k].id;
+        //         // }
+        //     }
+        // }
     }
 }
 
+/**
+ * N - number of points 
+ * D - radius around the current point
+ * K - number of points until distance of D
+ * tCount - number of points (t), we want to check
+ */
 int computeOnGPU(int *N, int *K, double *D, int *tCount, int *myPointsCount, double *tValues, int *results, int *resultsCount, int *maxResults, Point *myPoints)
 {
     // Error code to check return values for CUDA calls
     cudaError_t err = cudaSuccess;
 
-    int numBlocks = (*myPointsCount + BLOCK_SIZE - 1) / BLOCK_SIZE; //??
-    dim3 gridDim(numBlocks, (*tCount) + 1); //??
-    dim3 blockDim(BLOCK_SIZE); //??
+    int blocksPerGrid = (*myPointsCount + BLOCK_SIZE - 1) / BLOCK_SIZE; 
+    int threadsPerBlock = BLOCK_SIZE;
 
     Point *dPoints;     // point for device
     double *dTValues;   // tValues for device
@@ -57,61 +60,47 @@ int computeOnGPU(int *N, int *K, double *D, int *tCount, int *myPointsCount, dou
     int *dResultsCount; // resultsCount for device
 
     err = cudaMalloc(&dPoints, (*myPointsCount) * sizeof(Point));
-    if (err != cudaSuccess)
-    {
+    if (err != cudaSuccess){
         fprintf(stderr, "Error in line %d (error code %s)!\n", __LINE__, cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
     err = cudaMalloc(&dTValues, (*tCount + 1) * sizeof(double));
-    if (err != cudaSuccess)
-    {
+    if (err != cudaSuccess){
         fprintf(stderr, "Error in line %d (error code %s)!\n", __LINE__, cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
     err = cudaMalloc(&dResults, (*maxResults) * 3 * sizeof(int));
-    if (err != cudaSuccess)
-    {
+    if (err != cudaSuccess){
         fprintf(stderr, "Error in line %d (error code %s)!\n", __LINE__, cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
     err = cudaMalloc(&dResultsCount, sizeof(int));
-    if (err != cudaSuccess)
-    {
+    if (err != cudaSuccess){
         fprintf(stderr, "Error in line %d (error code %s)!\n", __LINE__, cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
 
     err = cudaMemcpy(dPoints, myPoints, (*myPointsCount) * sizeof(Point), cudaMemcpyHostToDevice);
-    if (err != cudaSuccess)
-    {
+    if (err != cudaSuccess){
         fprintf(stderr, "Error in line %d (error code %s)!\n", __LINE__, cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
     err = cudaMemcpy(dTValues, tValues, (*tCount + 1) * sizeof(double), cudaMemcpyHostToDevice);
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Error in line %d (error code %s)!\n", __LINE__, cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
-    err = cudaMemset(dResultsCount, 0, sizeof(int));
-    if (err != cudaSuccess)
-    {
+    if (err != cudaSuccess){
         fprintf(stderr, "Error in line %d (error code %s)!\n", __LINE__, cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
 
-    checkProximityCriteria<<<gridDim, blockDim>>>(dPoints, dTValues, N, K, D, dResults, dResultsCount);
+    checkProximityCriteria<<<blocksPerGrid, threadsPerBlock>>>(dPoints, dTValues, N, K, D, dResults, dResultsCount);
 
-    err = cudaMemcpy(&resultsCount, dResultsCount, sizeof(int), cudaMemcpyDeviceToHost);
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Error in line %d (error code %s)!\n", __LINE__, cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
+    // err = cudaMemcpy(&resultsCount, dResultsCount, sizeof(int), cudaMemcpyDeviceToHost);
+    // if (err != cudaSuccess){
+    //     fprintf(stderr, "Error in line %d (error code %s)!\n", __LINE__, cudaGetErrorString(err));
+    //     exit(EXIT_FAILURE);
+    // }
 
     // err = cudaMemcpy(results, dResults, (*resultsCount) * 3 * sizeof(int), cudaMemcpyDeviceToHost);
-    // if (err != cudaSuccess)
-    // {
+    // if (err != cudaSuccess){
     //     fprintf(stderr, "Error in line %d (error code %s)!\n", __LINE__, cudaGetErrorString(err));
     //     exit(EXIT_FAILURE);
     // }
