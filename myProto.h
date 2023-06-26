@@ -10,7 +10,8 @@ typedef struct Point {
     double x1, x2, a, b;
 } Point;
 
+
 #endif
 
 void test(int *data, int n);
-void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues, Point *points);
+void computeOnGPU(int *count, int *N, int *K, double *D, int *tCountSize, double *myTValues, Point *points);

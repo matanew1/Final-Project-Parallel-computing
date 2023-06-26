@@ -108,10 +108,12 @@ int main(int argc, char *argv[])
    int tCountSize = sendcounts[rank];
    double *myTValues = (double *)malloc(tCountSize * sizeof(double));
    MPI_Scatterv(tValues, sendcounts, displs, MPI_DOUBLE, myTValues, tCountSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+   
+   int count = 0, globalCount;
+   computeOnGPU(&count, &N, &K, &D, &tCountSize, myTValues, points);
 
-
-   if(rank == 0 )
-      computeOnGPU(&N, &K, &D, &tCountSize, myTValues, points);
+   //TODO: MPI_Reduce() to globalCount
+   printf("%d %d\n",rank,count);
 
    free(points);
    free(tValues);
