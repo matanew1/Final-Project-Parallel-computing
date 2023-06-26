@@ -16,7 +16,7 @@ __device__ double calcDistance(const Point* p1, const Point* p2, double* t) {
 
 __global__ void checkProximityCriteria(int* count, const Point *points, double *tValues, const int tCount,const int N,const int K, const double D){
     int idx = blockIdx.x * blockDim.x + threadIdx.x; // point idx
-    printf("%d\n",idx);
+
     if (idx < tCount)
     {       
         double* currentTValue = &(tValues[idx]);
