@@ -14,26 +14,24 @@ __device__ double calcDistance(const Point* p1, const Point* p2, double* t) {
     return distance;
 }
 
-__global__ void __global__ void checkProximityCriteria(int* count, const Point *points, double *tValues, const int tCount,const int N,const int K, const double D, double* distances)
-{
+__global__ void checkProximityCriteria(int* count, const Point *points, double *tValues, const int tCount,const int N,const int K, const double D){
     int idx = blockIdx.x * blockDim.x + threadIdx.x; // point idx
 
     if (idx < tCount)
-    {       
-te* currentTValue = &(tValues[idx]);
-        for (int i = int = points[i];
-            for(int j = 0; j < N &int = points[j];
-                double distance points[i]ce(points[j]intt, currentTValue);
+    {
+        
+        double* t = &(tValues[idx]);
+        for (int i = 0; i < N; i++) {
+            for(int j = 0; j < N && j != i; j++) {
+                double distance = calcDistance(&points[i], &points[j], t);
 
                 if (distance <= D) {
-                    atomicAdd(count, 1);
-                    if (
-count) >= K) {
+                    (*count)++;
+                    if ((*count) >= K) {
                         break;
                     }
-                }
-                distances[idx * N * (N - 1) + i * (N - 1) + j] = distance;
-            }
+                }  
+            }         
         }
     }
 }
@@ -43,12 +41,11 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
     // Error code to check return values for CUDA calls
     cudaError_t err = cudaSuccess;
 
-    int l(ocksPerGrid  * (*N)) / BLOCK_SIZE < 1 ? 1 : round(((*tCountSize) * (*N)) / BLOCK_SIZE);1) / BLOCK_SIZE;
-    int threadsPerBlock    // printf("%d %d\n",blocksPerGrid, threadsPerBlock); = BLOCK_SIZE;
+    int blocksPerGrid = ((*tCountSize) + (*N)) / BLOCK_SIZE < 1 ? 1 : ((*tCountSize) + (*N)) / BLOCK_SIZE < 1; 
+    int threadsPerBlock = BLOCK_SIZE;
 
-    Point *dPoints;         // points for device
-    double *dTValues;       // tValues for device
-    double *dDistances;     // distances array for device
+    Point *dPoints;     // point for device
+    double *dTValues;   // tValues for device    
 
     err = cudaMalloc(&dPoints, (*N) * sizeof(Point));
     if (err != cudaSuccess){
@@ -56,11 +53,6 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
         exit(EXIT_FAILURE);
     }
     err = cudaMalloc(&dTValues, (*tCountSize) * sizeof(double));
-    if (err != cudaSuccess){
-        fprintf(stderr, "Error in line %d (error code %s)!\n", __LINE__, cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
-    err = cudaMalloc(&dDistances, (*tCountSize) * (*N) * (*N - 1) * sizeof(double));
     if (err != cudaSuccess){
         fprintf(stderr, "Error in line %d (error code %s)!\n", __LINE__, cudaGetErrorString(err));
         exit(EXIT_FAILURE);
@@ -78,31 +70,11 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
     }
 
     int count = 0;
-    checkProximityCriteria<<<blocksPerGrid, threadsPerBlock>>>(&count, dPoints, dTValues, *tCountSize, *N, *K, *D, dDistances);
 
-    double *distances = (double*)malloc((*tCountSize) * (*N) * (*N - 1) * sizeof(double));
-    if (distances == NULL){
-        fprintf(stderr, "Error allocating host memory!\n");
-        exit(EXIT_FAILURE);
-    }
-
-    err = cudaMemcpy(distances, dDistances, (*tCountSize) * (*N) * (*N - 1) * sizeof(double), cudaMemcpyDeviceToHost);
-    if (err != cudaSuccess){
-        fprintf(stderr, "Error in line %d (error code %s)!\n", __LINE__, cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
-
-    // Print the distances
-    for (int idx = 0; idx < (*tCountSize); idx++) {
-        for (int i = 0; i < (*N); i++) {
-            for (int j = 0; j < (*N - 1); j++) {
-                printf("%d) Point %d and point %d - distance %lf\n", 
-                    idx, i, j, distances[idx * (*N) * (*N - 1) + i * (*N - 1) + j]);
-            }/
-        }
-    }
-
+    checkProximityCriteria<<<blocksPerGrid, threadsPerBlock>>>(&count, dPoints, dTValues, *tCountSize, *N, *K, *D);
+    printf("Count: %d\n",count);
+    
+    // free device allocation
     cudaFree(dPoints);
     cudaFree(dTValues);
-    cudaFree(dDistances);
-    free(distances);
+}
