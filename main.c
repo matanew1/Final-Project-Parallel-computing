@@ -95,18 +95,22 @@ int main(int argc, char *argv[])
 
    int tPointsPerProcess = tCount / size;
    int remainingTPoints = tCount % size;
-   int myTPointsCount = (rank < remainingTPoints) ? tPointsPerProcess + 1 : tPointsPerProcess;
-   int myTPointsOffset = rank * tPointsPerProcess + ((rank < remainingTPoints) ? rank : remainingTPoints);
+   int *sendcounts = (int *)malloc(size * sizeof(int));
+   int *displs = (int *)malloc(size * sizeof(int));
 
-   double *myTPoints = (double *)malloc(myTPointsCount * sizeof(double));
-   MPI_Scatter(tValues, myTPointsCount, MPI_INT, myTPoints, myTPointsCount, MPI_INT, 0, MPI_COMM_WORLD);
+   // Calculate the sendcounts and displacements
+   for (int i = 0; i < size; i++) {
+      sendcounts[i] = (i < remainingTPoints) ? tPointsPerProcess + 1 : tPointsPerProcess;
+      displs[i] = i * tPointsPerProcess + ((i < remainingTPoints) ? i : remainingTPoints);
+   }
 
-   printf("rank = %d dount=%d offset=%d\n",rank,myTPointsCount,myTPointsOffset);
-   for(int i = 0; i <)
-   
+   double *myTPoints = (double *)malloc(sendcounts[rank] * sizeof(double));
+   MPI_Scatterv(tValues, sendcounts, displs, MPI_DOUBLE, myTPoints, sendcounts[rank], MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-
-
+   printf("rank: %d\n", i);
+   for (int i = 0; i < sendcounts[rank]; i++) {
+      printf(" %f\n", myTPoints[i]);
+   }
    /*
       N = 4
       K = 2
