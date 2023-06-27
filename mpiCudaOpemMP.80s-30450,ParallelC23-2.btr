@@ -1,0 +1,18 @@
+
+mpiCudaOpemMP:30450 terminated with signal 11 at PC=7f9a03a6fbf0 SP=7fffe1c2f610.  Backtrace:
+/lib/x86_64-linux-gnu/libcuda.so.1(+0x26fbf0)[0x7f9a03a6fbf0]
+/lib/x86_64-linux-gnu/libcuda.so.1(+0x161868)[0x7f9a03961868]
+/lib/x86_64-linux-gnu/libcuda.so.1(+0x1d3651)[0x7f9a039d3651]
+/lib/x86_64-linux-gnu/libcuda.so.1(+0x431edf)[0x7f9a03c31edf]
+/lib/x86_64-linux-gnu/libcuda.so.1(+0x189b40)[0x7f9a03989b40]
+/lib/x86_64-linux-gnu/libcuda.so.1(+0x4154e4)[0x7f9a03c154e4]
+/lib/x86_64-linux-gnu/libcuda.so.1(+0x181178)[0x7f9a03981178]
+/lib/x86_64-linux-gnu/libcuda.so.1(+0x1fd246)[0x7f9a039fd246]
+/usr/local/cuda-11.7/lib64/libcudart.so.11.0(+0x42dd9)[0x7f9a11a42dd9]
+/usr/local/cuda-11.7/lib64/libcudart.so.11.0(+0x16d25)[0x7f9a11a16d25]
+/usr/local/cuda-11.7/lib64/libcudart.so.11.0(cudaMemcpy+0x1d1)[0x7f9a11a65891]
+./mpiCudaOpemMP(+0x362d)[0x56326c65762d]
+./mpiCudaOpemMP(+0x2d49)[0x56326c656d49]
+/lib/x86_64-linux-gnu/libc.so.6(+0x29d90)[0x7f9a0ee29d90]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x80)[0x7f9a0ee29e40]
+./mpiCudaOpemMP(+0x2585)[0x56326c656585]

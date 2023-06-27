@@ -99,64 +99,76 @@ int main(int argc, char *argv[])
    int mytValuesSize = tCount / size;
    int remainingTValues = tCount % size;
    int *sendcounts = (int *)malloc(size * sizeof(int));
-   int *displs = (int *)malloc(size * sizeof(int));
+   int *senddispls = (int *)malloc(size * sizeof(int));
 
    // Calculate the sendcounts and displacements
    for (int i = 0; i < size; i++)
    {
       sendcounts[i] = (i < remainingTValues) ? mytValuesSize + 1 : mytValuesSize;
-      displs[i] = i * mytValuesSize + ((i < remainingTValues) ? i : remainingTValues);
+      senddispls[i] = i * mytValuesSize + ((i < remainingTValues) ? i : remainingTValues);
    }
    int tCountSize = sendcounts[rank];
    double *myTValues = (double *)malloc(tCountSize * sizeof(double));
 
-   MPI_Scatterv(tValues, sendcounts, displs, MPI_DOUBLE, myTValues, tCountSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+   MPI_Scatterv(tValues, sendcounts, senddispls, MPI_DOUBLE, myTValues, tCountSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
    int count = 0;
    int globalCount = 0;
 
-   int *results = (int *)malloc(N * tCountSize * sizeof(int));
-   for (int i = 0; i < N*tCountSize; i++)
+   int **results = (int **)malloc(N * sizeof(int *));
+   for (int i = 0; i < N; i++)
    {
-      results[i] = -1;
+      results[i] = (int *)malloc(tCountSize * sizeof(int));
+      for (int j = 0; j < tCountSize; j++)
+      {
+         results[i][j] = -1;
+      }
    }
+
+
    computeOnGPU(&count, &N, &K, &D, &tCountSize, myTValues, points, results);
 
-   // Reduce the local count to get the global count
-   MPI_Reduce(&count, &globalCount, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+   // Gather results from all processes into global_results on rank 0
+   int* recvcounts = (int*)malloc(size * sizeof(int));
+   int* recvdispls = (int*)malloc(size * sizeof(int));
 
-   int *global_results = NULL;
-   if (rank == 0)
-   {     
-      global_results = (int *)calloc(tCount*N , sizeof(int));     
-   }
-   int *recvcounts = (int *)malloc(size * sizeof(int));
-   int *revcdispls = (int *)malloc(size * sizeof(int));
+   // Calculate the recvcounts and displacements for the 2D array
    for (int i = 0; i < size; i++)
    {
-      recvcounts[i] = //TODO: calc recvcounts
+      recvcounts[i] = N * tCountSize;
+      recvdispls[i] = 0;
    }
    
 
-   // Gather results from all processes into global_results on rank 0
-   MPI_Gatherv(results, tCountSize, MPI_INT,
-               global_results, recvcounts, revcdispls, MPI_INT,
-               0, MPI_COMM_WORLD); 
+   // Adjust the displacements for the 2D array
+   for (int i = 1; i < size; i++)
+   {
+      recvdispls[i] = recvdispls[i - 1] + recvcounts[i - 1];
+   }
 
+   int** global_results = NULL;
+   if (rank == 0)
+   {
+      global_results = (int**)malloc(N * sizeof(int*));
+      for (int i = 0; i < N; i++)
+      {
+         global_results[i] = (int*)malloc(tCount * sizeof(int));
+         for (int j = 0; j < tCount; j++)
+         {
+            global_results[i][j] = -1;
+         }
+         
+      }
+   }
+
+   // Gather the 2D array results from all processes into global_results on rank 0
+   MPI_Gatherv(&(results[0][0]), N * tCountSize, MPI_INT,
+               &(global_results[0][0]), recvcounts, recvdispls, MPI_INT,
+               0, MPI_COMM_WORLD);
 
    if (rank == 0)
    {
       printf("Global Count: %d\n", globalCount);
-
-      // Print the results
-      for (int i = 0; i < N; i++)
-      {
-         for (int j = 0; j < tCount; j++)
-         {
-            printf(" %d (%d %d)", global_results[i][j], i , j);
-         }
-         printf("\n");
-      }
 
       // Deallocate global_results memory
       for (int i = 0; i < N; i++)
@@ -171,7 +183,7 @@ int main(int argc, char *argv[])
    free(tValues);
    MPI_Type_free(&MPI_POINT);
    free(sendcounts);
-   free(displs);
+   free(recvdispls);
    free(myTValues);
    for (int i = 0; i < N; i++)
    {
