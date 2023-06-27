@@ -88,6 +88,8 @@ void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int **
       }
    }
 
+   printf("rank = %d recvcounts = %d",rank, recvcounts[rank]);
+   printf("rank = %d displs = %d",rank, displs[rank]);
    for (int i = 0; i < N; i++)
    {
       for (int j = 0; j < tCountSize; j++)
@@ -97,11 +99,11 @@ void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int **
       printf("\n");
    }
    printf("\n");
-   MPI_Barrier(MPI_COMM_WORLD);
+
    // Gather the 2D array results from all processes into global_results on rank 0
-   MPI_Gatherv(&(results[0][0]), N * tCountSize, MPI_INT,
-               &((*global_results)[0][0]), recvcounts, displs, MPI_INT,
-               0, MPI_COMM_WORLD);
+   // MPI_Gatherv(&(results[0][0]), N * tCountSize, MPI_INT,
+   //             &((*global_results)[0][0]), recvcounts, displs, MPI_INT,
+   //             0, MPI_COMM_WORLD);
 
    free(recvcounts);
    free(displs);
