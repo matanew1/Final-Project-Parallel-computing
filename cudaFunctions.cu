@@ -14,7 +14,7 @@ __device__ double calcDistance(const Point* p1, const Point* p2, double* t) {
     return distance;
 }
 
-__global__ void checkProximityCriteria(int* count, Point *points, double *tValues, const int tCount,const int N,const int K, const double D){
+__global__ void checkProximityCriteria(int* count, Point *points, double *tValues, const int tCount,const int N,const int K, const double D, int **results){
     int idx = blockIdx.x * blockDim.x + threadIdx.x; // point idx
 
     if (idx < tCount)
@@ -32,7 +32,8 @@ __global__ void checkProximityCriteria(int* count, Point *points, double *tValue
                 if( distance <= D ) {
                     atomicAdd(count, 1);
                 }
-                if (*count >= K) {
+                if (*count == K) {                  
+                    results[t] =
                     break;
                 }
             }         
@@ -40,7 +41,7 @@ __global__ void checkProximityCriteria(int* count, Point *points, double *tValue
     }
 }
 
-void computeOnGPU(int *count, int *N, int *K, double *D, int *tCountSize, double *myTValues, Point *points) {
+void computeOnGPU(int *count, int *N, int *K, double *D, int *tCountSize, double *myTValues, Point *points, int **results) {
     // Error code to check return values for CUDA calls
     cudaError_t err = cudaSuccess;
 
@@ -64,7 +65,7 @@ void computeOnGPU(int *count, int *N, int *K, double *D, int *tCountSize, double
         exit(EXIT_FAILURE);
     }
     err = cudaMalloc((void **)&d_tValues, (*tCountSize) * sizeof(double));
-    if (err != cudaSuccess)
+    if (err != cudaSuccess)results
     {
         fprintf(stderr, "Failed to allocate device tValues (error code %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
@@ -91,7 +92,7 @@ void computeOnGPU(int *count, int *N, int *K, double *D, int *tCountSize, double
     }
 
     // Launch the proximity criteria check on the GPU
-    checkProximityCriteria<<<blocksPerGrid, threadPerBlock>>>(d_count, d_points, d_tValues, *tCountSize, *N, *K, *D);
+    checkProximityCriteria<<<blocksPerGrid, threadPerBlock>>>(d_count, d_points, d_tValues, *tCountSize, *N, *K, *D, results);
     err = cudaGetLastError();
     if (err != cudaSuccess)
     {

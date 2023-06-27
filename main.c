@@ -111,7 +111,13 @@ int main(int argc, char *argv[])
    
    int count = 0;
    int globalCount = 0;
-   computeOnGPU(&count, &N, &K, &D, &tCountSize, myTValues, points);
+
+   int **results = (int **)malloc(tCount * sizeof(int *));
+   for (int i = 0; i < tCount; i++) {
+      results[i] = (int *)malloc(N * sizeof(int));
+   }
+
+   computeOnGPU(&count, &N, &K, &D, &tCountSize, myTValues, points, results);
 
    // Reduce the local count to get the global count
    MPI_Reduce(&count, &globalCount, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);

@@ -14,4 +14,4 @@ typedef struct Point {
 #endif
 
 void test(int *data, int n);
-void computeOnGPU(int *count, int *N, int *K, double *D, int *tCountSize, double *myTValues, Point *points);
+void computeOnGPU(int *count, int *N, int *K, double *D, int *tCountSize, double *myTValues, Point *points, int **results);
