@@ -143,6 +143,14 @@ int main(int argc, char *argv[])
       }
    }
 
+   /*
+   mpiCudaOpemMP:21906 terminated with signal 11 at PC=559cada42e57 SP=7ffd23274210.  Backtrace:
+./mpiCudaOpemMP(+0x2e57)[0x559cada42e57]
+/lib/x86_64-linux-gnu/libc.so.6(+0x29d90)[0x7fc856a29d90]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x80)[0x7fc856a29e40]
+./mpiCudaOpemMP(+0x2545)[0x559cada42545]
+make: *** [Makefile:12: run] Error 1*/
+
    // Gather results from all processes into global_results on rank 0
    MPI_Gather(*results, N * tCountSize, MPI_INT, *global_results, N * tCountSize, MPI_INT, 0, MPI_COMM_WORLD);
 
