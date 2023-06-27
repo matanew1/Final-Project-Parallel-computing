@@ -34,7 +34,7 @@ __global__ void checkProximityCriteria(int *count, Point *points, double *tValue
                     if (currentCount < K)
                     {
                         int index = idx * tCount + i;
-                        printf("t = %d || at index = %d save point %d\n",idx, index, points[i].id);
+                        printf("t = %d || at index_res = %d save point %d\n",idx, index, points[i].id);
                         atomicExch(&results[index], points[i].id);
 
                         // Check if all K results have been found
@@ -44,12 +44,14 @@ __global__ void checkProximityCriteria(int *count, Point *points, double *tValue
                 }
             }
         }
+        // __threadfence();
+        // __syncthreads();
         for (int i = 0; i < tCount; i++)
         {
             printf("current t %d\n", i);
             for (int j = 0; j < N; j++)
             {
-                printf("\tp[%d] = %d ", j, results[i * (N) + j]);
+                printf("\tp[%d] = %d ", j, results[i * N + j]);
             }
             printf("\n");
         }
