@@ -149,9 +149,8 @@ int main(int argc, char *argv[])
 
    int *results = (int *)malloc(N * tCountSize * sizeof(int));
    for (int i = 0; i < N * tCountSize; i++)
-   {
-      results[i] = -1;     
-   }
+      results[i] = -1;
+   
 
    // Compute results on GPU
    if (rank == 0 ) computeOnGPU(&count, &N, &K, &D, &myTValuesSize, myTValues, points, results);
@@ -172,16 +171,16 @@ int main(int argc, char *argv[])
 
    if (rank == 0)
    {
-      printf("Global Count: %d\n", globalCount);
+      // printf("Global Count: %d\n", globalCount);
 
-      for (int i = 0; i < tCount; i++)
-      {
-         printf("current t %d\n",i);
-         for (int j = 0; j < N; j++) {
-            printf("\tp[%d] = %d ",j,global_results[i*N+j]);
-         }
-         printf("\n");
-      }
+      // for (int i = 0; i < tCount; i++)
+      // {
+      //    printf("current t %d\n",i);
+      //    for (int j = 0; j < N; j++) {
+      //       printf("\tp[%d] = %d ",j,global_results[i*N+j]);
+      //    }
+      //    printf("\n");
+      // }
       
       // Deallocate global_results memory
       free(global_results);

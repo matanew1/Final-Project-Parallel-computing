@@ -26,29 +26,30 @@ __global__ void checkProximityCriteria(int *count, Point *points, double *tValue
         {
             for (int j = 0; j < N && i != j; j++)
             {
-
                 double distance = calcDistance(&points[i], &points[j], &t);
 
-                // printf("t = %d distance %lf point %d (x1=%.2lf x2=%.2lf a=%.2lf b=%.2lf) and point %d (x1=%.2lf x2=%.2lf a=%.2lf b=%.2lf)\n",
-                // idx,distance,
-                // i,points[i].x1, points[i].x2, points[i].a, points[i].b,
-                // j,points[j].x1, points[j].x2, points[j].a, points[j].b);
                 if (distance <= D && distance > 0)
                 {
-                    if (*count < K)
+                    int currentCount = atomicAdd(count, 1);
+                    if (currentCount < K)
                     {
-                        atomicAdd(count, 1);
-                        printf("point %d has %d count\n", points[i].id);
+                        printf("t = %d || point %d has %d count\n",idx, points[i].id, currentCount + 1);
                         atomicExch(&results[i * tCount + idx], points[i].id);
                     }
                 }
+
                 if (*count >= K)
                 {
+                    // Ensure all threads have finished updating count before breaking
+                    __threadfence();
                     break;
                 }
             }
+
             if (*count >= K)
             {
+                // Ensure all threads have finished updating count before breaking
+                __threadfence();
                 break;
             }
         }
@@ -121,6 +122,7 @@ void computeOnGPU(int *count, int *N, int *K, double *D, int *tCountSize, double
 
     // Launch the proximity criteria check on the GPU
     checkProximityCriteria<<<blocksPerGrid, threadPerBlock>>>(d_count, d_points, d_tValues, *tCountSize, *N, *K, *D, d_results);
+    cudaDeviceSynchronize();
     err = cudaGetLastError();
     if (err != cudaSuccess)
     {
@@ -135,7 +137,7 @@ void computeOnGPU(int *count, int *N, int *K, double *D, int *tCountSize, double
         fprintf(stderr, "Failed to copy count from device to host (error code %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
-    err = cudaMemcpy(results, d_results, sizeof(int), cudaMemcpyDeviceToHost);
+    err = cudaMemcpy(results, d_results, (*N) * (*tCountSize) * sizeof(int), cudaMemcpyDeviceToHost);
     if (err != cudaSuccess)
     {
         fprintf(stderr, "Failed to copy results from device to host (error code %s)!\n", cudaGetErrorString(err));
