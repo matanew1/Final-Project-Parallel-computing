@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "random": "cpp",
-        "algorithm": "c"
+        "algorithm": "c",
+        "type_traits": "cpp"
     }
 }

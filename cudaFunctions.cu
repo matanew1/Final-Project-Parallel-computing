@@ -23,9 +23,8 @@ __global__ void checkProximityCriteria(int* count, Point *points, double *tValue
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N && i != j; j++) {
                 double distance = calcDistance(&points[i], &points[j], &t);
-
-
-                // printf("t = %d - point %d and point %d - distance %lf\n",idx, i,j,distance);
+                
+                printf("t = %d - point %d and point %d - distance %lf\n",idx, i,j,distance);
                 if (distance <= D) {
                     int currentCount = atomicAdd(count, 1);
                     if (currentCount < K) {
