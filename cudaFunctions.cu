@@ -28,14 +28,14 @@ __global__ void checkProximityCriteria(Point *points, double *tValues, const int
             for (int j = 0; j < N && i != j; j++)
             {
                 double distance = calcDistance(&points[i], &points[j], &t);
-
+                
                 if (distance <= D && distance > 0)
                 {
                     count++;
                     if (count == K) {
-                        int index = idx * tCount + i;
-                        printf("t = %d || at index_res = %d save point %d\n",idx, index, points[i].id);
-                        atomicExch(&results[index], points[i].id);
+                        // int index = idx * CONSTRAINTS + j;
+                        printf("t = %d || with point %d\n",idx,points[i].id);
+                        // atomicExch(&results[index], points[i].id);
                         return;
                     }                          
                 }
@@ -50,7 +50,8 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
     cudaError_t err = cudaSuccess;
 
     int threadPerBlock = *tCountSize < BLOCK_SIZE ? *tCountSize : BLOCK_SIZE;
-    int blocksPerGrid = ((*tCountSize) * (*N)) / threadPerBlock < 1 ? 1 : ceil(((*tCountSize) * (*N)) / threadPerBlock);
+    int blocksPerGrid = 1;
+
     Point *d_points = NULL;
     double *d_tValues = NULL;
     int *d_results = NULL;
@@ -113,15 +114,15 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
         exit(EXIT_FAILURE);
     }
 
-    for (int i = 0; i < *tCountSize; i++)
-    {
-        printf("current t %d\n", i);
-        for (int j = 0; j < CONSTRAINTS; j++)
-        {
-            printf("\tp[%d] = %d ", j, results[i * (CONSTRAINTS) + j]);
-        }
-        printf("\n");
-    }
+    // for (int i = 0; i < *tCountSize; i++)
+    // {
+    //     printf("current t %d\n", i);
+    //     for (int j = 0; j < CONSTRAINTS; j++)
+    //     {
+    //         printf("\tp[%d] = %d ", j, results[i * (CONSTRAINTS) + j]);
+    //     }
+    //     printf("\n");
+    // }
 
     // Free device memory
     cudaFree(d_points);
