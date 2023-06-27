@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
    }
    for (int i = 0; i < N; i++)
    {
-      for (int j = 0; j < tCount; j++)
+      for (int j = 0; j < tCountSize; j++)
       {
          results[i][j] = -1;
       }
@@ -131,19 +131,21 @@ int main(int argc, char *argv[])
    // Reduce the local count to get the global count
    MPI_Reduce(&count, &globalCount, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
+   int **global_results = NULL;
+
    if (rank == 0)
    {
       printf("Global Count: %d\n", globalCount);
    }
 
-   for (int i = 0; i < N; i++)
-   {
-      for (int j = 0; j < tCount; j++)
-      {
-         printf(" %d ", results[i][j]);
-      }
-      printf("\n");
-   }
+   // for (int i = 0; i < N; i++)
+   // {
+   //    for (int j = 0; j < tCount; j++)
+   //    {
+   //       printf(" %d ", results[i][j]);
+   //    }
+   //    printf("\n");
+   // }
 
    free(points);
    free(tValues);
