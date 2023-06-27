@@ -15,8 +15,9 @@ __device__ double calcDistance(const Point *p1, const Point *p2, double *t)
     return distance;
 }
 
-__global__ void checkProximityCriteria(int *count, Point *points, double *tValues, const int tCount, const int N, const int K, const double D, int *results)
+__global__ void checkProximityCriteria(Point *points, double *tValues, const int tCount, const int N, const int K, const double D, int *results)
 {
+    int count = 0;
     int idx = blockIdx.x * blockDim.x + threadIdx.x; // point idx
     if (idx < tCount)
     {
@@ -30,53 +31,31 @@ __global__ void checkProximityCriteria(int *count, Point *points, double *tValue
 
                 if (distance <= D && distance > 0)
                 {
-                    int currentCount = atomicAdd(count, 1);
-                    if (currentCount < K)
-                    {
+                    count++;
+                    if (count == K) {
                         int index = idx * tCount + i;
                         printf("t = %d || at index_res = %d save point %d\n",idx, index, points[i].id);
                         atomicExch(&results[index], points[i].id);
-
-                        // Check if all K results have been found
-                        if (*count >= K)
-                            return;
-                    }
+                        return;
+                    }                          
                 }
             }
-        }
-        // __threadfence();
-        // __syncthreads();
-        for (int i = 0; i < tCount; i++)
-        {
-            printf("current t %d\n", i);
-            for (int j = 0; j < N; j++)
-            {
-                printf("\tp[%d] = %d ", j, results[i * N + j]);
-            }
-            printf("\n");
         }
     }
 }
 
-void computeOnGPU(int *count, int *N, int *K, double *D, int *tCountSize, double *myTValues, Point *points, int *results)
+void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues, Point *points, int *results)
 {
     // Error code to check return values for CUDA calls
     cudaError_t err = cudaSuccess;
 
     int threadPerBlock = *tCountSize < BLOCK_SIZE ? *tCountSize : BLOCK_SIZE;
     int blocksPerGrid = ((*tCountSize) * (*N)) / threadPerBlock < 1 ? 1 : ceil(((*tCountSize) * (*N)) / threadPerBlock);
-    int *d_count = NULL;
     Point *d_points = NULL;
     double *d_tValues = NULL;
     int *d_results = NULL;
 
     // Allocate the device
-    err = cudaMalloc((void **)&d_count, sizeof(int));
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to allocate device count (error code %s)!\n", cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
     err = cudaMalloc((void **)&d_points, (*N) * sizeof(Point));
     if (err != cudaSuccess)
     {
@@ -89,7 +68,7 @@ void computeOnGPU(int *count, int *N, int *K, double *D, int *tCountSize, double
         fprintf(stderr, "Failed to allocate device tValues (error code %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
-    err = cudaMalloc((void **)&d_results, (*N) * (*tCountSize) * sizeof(int));
+    err = cudaMalloc((void **)&d_results, (CONSTRAINTS) * (*tCountSize) * sizeof(int));
     if (err != cudaSuccess)
     {
         fprintf(stderr, "Failed to allocate device results (error code %s)!\n", cudaGetErrorString(err));
@@ -109,13 +88,7 @@ void computeOnGPU(int *count, int *N, int *K, double *D, int *tCountSize, double
         fprintf(stderr, "Failed to copy tValues from host to device (error code %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
-    err = cudaMemcpy(d_count, count, sizeof(int), cudaMemcpyHostToDevice);
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to copy count from host to device (error code %s)!\n", cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
-    err = cudaMemcpy(d_results, results, sizeof(int), cudaMemcpyHostToDevice);
+    err = cudaMemcpy(d_results, results, (CONSTRAINTS) * (*tCountSize) * sizeof(int), cudaMemcpyHostToDevice);
     if (err != cudaSuccess)
     {
         fprintf(stderr, "Failed to copy results from host to device (error code %s)!\n", cudaGetErrorString(err));
@@ -123,9 +96,8 @@ void computeOnGPU(int *count, int *N, int *K, double *D, int *tCountSize, double
     }
 
     // Launch the proximity criteria check on the GPU
-    checkProximityCriteria<<<blocksPerGrid, threadPerBlock>>>(d_count, d_points, d_tValues, *tCountSize, *N, *K, *D, d_results);
+    checkProximityCriteria<<<blocksPerGrid, threadPerBlock>>>(d_points, d_tValues, *tCountSize, *N, *K, *D, d_results);
     cudaDeviceSynchronize();
-
     err = cudaGetLastError();
     if (err != cudaSuccess)
     {
@@ -134,21 +106,24 @@ void computeOnGPU(int *count, int *N, int *K, double *D, int *tCountSize, double
     }
 
     // Copy from device to host
-    err = cudaMemcpy(count, d_count, sizeof(int), cudaMemcpyDeviceToHost);
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to copy count from device to host (error code %s)!\n", cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
-    err = cudaMemcpy(results, d_results, (*N) * (*tCountSize) * sizeof(int), cudaMemcpyDeviceToHost);
+    err = cudaMemcpy(results, d_results, (CONSTRAINTS) * (*tCountSize) * sizeof(int), cudaMemcpyDeviceToHost);
     if (err != cudaSuccess)
     {
         fprintf(stderr, "Failed to copy results from device to host (error code %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
 
+    for (int i = 0; i < *tCountSize; i++)
+    {
+        printf("current t %d\n", i);
+        for (int j = 0; j < CONSTRAINTS; j++)
+        {
+            printf("\tp[%d] = %d ", j, results[i * (CONSTRAINTS) + j]);
+        }
+        printf("\n");
+    }
+
     // Free device memory
-    cudaFree(d_count);
     cudaFree(d_points);
     cudaFree(d_tValues);
     cudaFree(d_results);

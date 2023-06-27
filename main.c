@@ -65,7 +65,7 @@ void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int *r
    // Calculate the recvcounts and displacements for the 2D array
    for (int i = 0; i < size; i++)
    {
-      recvcounts[i] = N * tCountSize;
+      recvcounts[i] = CONSTRAINTS * tCountSize;
       displs[i] = 0;
    }
 
@@ -76,7 +76,7 @@ void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int *r
    }
 
    // Gather the 2D array results from all processes into global_results on rank 0
-   MPI_Gatherv(results, N * tCountSize, MPI_INT,
+   MPI_Gatherv(results, CONSTRAINTS * tCountSize, MPI_INT,
                global_results, recvcounts, displs, MPI_INT,
                0, MPI_COMM_WORLD);
 
@@ -147,22 +147,18 @@ int main(int argc, char *argv[])
    int count = 0;
    int globalCount = 0;
 
-   int *results = (int *)malloc(N * tCountSize * sizeof(int));
-   for (int i = 0; i < N * tCountSize; i++)
+   int *results = (int *)malloc(CONSTRAINTS * tCountSize * sizeof(int));
+   for (int i = 0; i < CONSTRAINTS * tCountSize; i++)
       results[i] = -1;
-   
 
    // Compute results on GPU
-   if (rank == 0 ) computeOnGPU(&count, &N, &K, &D, &myTValuesSize, myTValues, points, results);
-
-   // Reduce the local count to get the global count
-   MPI_Reduce(&count, &globalCount, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+   if (rank == 0 ) computeOnGPU(&N, &K, &D, &myTValuesSize, myTValues, points, results);
 
    int *global_results = NULL;
    if (rank == 0)
    {
-      global_results = (int *)malloc(N * tCount * sizeof(int));
-      for (int i = 0; i < N * tCount; i++)
+      global_results = (int *)malloc(CONSTRAINTS * tCount * sizeof(int));
+      for (int i = 0; i < CONSTRAINTS * tCount; i++)
       {
          global_results[i] = -1;         
       }
