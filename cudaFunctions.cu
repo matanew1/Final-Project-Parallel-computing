@@ -33,14 +33,9 @@ __global__ void checkProximityCriteria(int *count, Point *points, double *tValue
                     int currentCount = atomicAdd(count, 1);
                     if (currentCount < K)
                     {
-                        int index = i * tCount + idx;
+                        int index = idx * tCount + i;
+                        printf("t = %d || at index = %d save point %d\n",idx, index, points[i].id);
                         atomicExch(&results[index], points[i].id);
-
-                        // Ensure all threads have finished updating results before continuing
-                        __threadfence();
-
-                        // Synchronize all threads to ensure results[index] is visible to all threads
-                        __syncthreads();
 
                         // Check if all K results have been found
                         if (*count >= K)
@@ -48,6 +43,15 @@ __global__ void checkProximityCriteria(int *count, Point *points, double *tValue
                     }
                 }
             }
+        }
+        for (int i = 0; i < tCount; i++)
+        {
+            printf("current t %d\n", i);
+            for (int j = 0; j < N; j++)
+            {
+                printf("\tp[%d] = %d ", j, results[i * (N) + j]);
+            }
+            printf("\n");
         }
     }
 }
@@ -119,6 +123,7 @@ void computeOnGPU(int *count, int *N, int *K, double *D, int *tCountSize, double
     // Launch the proximity criteria check on the GPU
     checkProximityCriteria<<<blocksPerGrid, threadPerBlock>>>(d_count, d_points, d_tValues, *tCountSize, *N, *K, *D, d_results);
     cudaDeviceSynchronize();
+
     err = cudaGetLastError();
     if (err != cudaSuccess)
     {
@@ -138,16 +143,6 @@ void computeOnGPU(int *count, int *N, int *K, double *D, int *tCountSize, double
     {
         fprintf(stderr, "Failed to copy results from device to host (error code %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
-    }
-
-    for (int i = 0; i < *tCountSize; i++)
-    {
-        printf("current t %d\n", i);
-        for (int j = 0; j < *N; j++)
-        {
-            printf("\tp[%d] = %d ", j, results[i * (*N) + j]);
-        }
-        printf("\n");
     }
 
     // Free device memory
