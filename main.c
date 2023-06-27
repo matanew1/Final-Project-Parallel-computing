@@ -3,16 +3,6 @@
 #include <omp.h>
 #include <stdlib.h>
 #include "myProto.h"
-/*
-Global Count: 3
-
-mpiCudaOpemMP:23294 terminated with signal 11 at PC=555fed1a4e72 SP=7ffda19c0c70.  Backtrace:
-./mpiCudaOpemMP(+0x2e72)[0x555fed1a4e72]
-/lib/x86_64-linux-gnu/libc.so.6(+0x29d90)[0x7ff111a29d90]
-/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x80)[0x7ff111a29e40]
-./mpiCudaOpemMP(+0x2565)[0x555fed1a4565]
-make: *** [Makefile:12: run] Error 1
-*/
 
 int main(int argc, char *argv[])
 {
@@ -119,44 +109,40 @@ int main(int argc, char *argv[])
    }
    int tCountSize = sendcounts[rank];
    double *myTValues = (double *)malloc(tCountSize * sizeof(double));
+
    MPI_Scatterv(tValues, sendcounts, displs, MPI_DOUBLE, myTValues, tCountSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
    int count = 0;
    int globalCount = 0;
 
-   int **results = (int **)malloc(N * sizeof(int *));
-   for (int i = 0; i < N; i++)
+   int *results = (int *)malloc(N * tCountSize * sizeof(int));
+   for (int i = 0; i < N*tCountSize; i++)
    {
-      results[i] = (int *)malloc(tCount * sizeof(int));
+      results[i] = -1;
    }
-   for (int i = 0; i < N; i++)
-   {
-      for (int j = 0; j < tCountSize; j++)
-      {
-         results[i][j] = -1;
-      }
-   }
-
    computeOnGPU(&count, &N, &K, &D, &tCountSize, myTValues, points, results);
 
    // Reduce the local count to get the global count
    MPI_Reduce(&count, &globalCount, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
-   int **global_results = NULL;
+   int *global_results = NULL;
    if (rank == 0)
-   {
-      printf("Global Count: %d\n", globalCount);
-
-      global_results = (int **)malloc(N * sizeof(int *));
-      for (int i = 0; i < N; i++)
-      {
-         global_results[i] = (int *)malloc(tCountSize * sizeof(int)); // Update the size to tCountSize
-      }
+   {     
+      global_results = (int *)calloc(tCount*N , sizeof(int));     
    }
-
+   int *recvcounts = (int *)malloc(size * sizeof(int));
+   int *revcdispls = (int *)malloc(size * sizeof(int));
+   for (int i = 0; i < size; i++)
+   {
+      recvcounts[i] = //TODO: calc recvcounts
+   }
+   
 
    // Gather results from all processes into global_results on rank 0
-   MPI_Gatherv(*results, tCountSize, MPI_INT, *global_results, sendcounts, displs, MPI_INT, 0, MPI_COMM_WORLD); // Update the count to tCountSize
+   MPI_Gatherv(results, tCountSize, MPI_INT,
+               global_results, recvcounts, revcdispls, MPI_INT,
+               0, MPI_COMM_WORLD); 
+
 
    if (rank == 0)
    {
@@ -167,7 +153,7 @@ int main(int argc, char *argv[])
       {
          for (int j = 0; j < tCount; j++)
          {
-            printf(" %d ", global_results[i][j]);
+            printf(" %d (%d %d)", global_results[i][j], i , j);
          }
          printf("\n");
       }
