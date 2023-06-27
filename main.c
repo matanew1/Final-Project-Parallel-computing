@@ -87,10 +87,10 @@ int main(int argc, char *argv[])
 
    MPI_Bcast(points, N, MPI_POINT, 0, MPI_COMM_WORLD);
 
-   double *tValues = (double*)malloc(tCount*sizeof(double));
-// calculate all t points
+   double *tValues = (double *)malloc(tCount * sizeof(double));
+   // calculate all t points
 #pragma omp parallel for
-   for (int i = 0; i <= tCount; ++i)
+   for (int i = 0; i < tCount; ++i)
    {
       tValues[i] = 2.0 * i / tCount - 1.0;
    }
@@ -101,19 +101,21 @@ int main(int argc, char *argv[])
    int *displs = (int *)malloc(size * sizeof(int));
 
    // Calculate the sendcounts and displacements
-   for (int i = 0; i < size; i++) {
+   for (int i = 0; i < size; i++)
+   {
       sendcounts[i] = (i < remainingTValues) ? mytValuesSize + 1 : mytValuesSize;
       displs[i] = i * mytValuesSize + ((i < remainingTValues) ? i : remainingTValues);
    }
    int tCountSize = sendcounts[rank];
    double *myTValues = (double *)malloc(tCountSize * sizeof(double));
    MPI_Scatterv(tValues, sendcounts, displs, MPI_DOUBLE, myTValues, tCountSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-   
+
    int count = 0;
    int globalCount = 0;
 
    int **results = (int **)malloc(N * sizeof(int *));
-   for (int i = 0; i < N; i++) {
+   for (int i = 0; i < N; i++)
+   {
       results[i] = (int *)malloc(tCount * sizeof(int));
    }
    for (int i = 0; i < N; i++)
@@ -122,14 +124,28 @@ int main(int argc, char *argv[])
       {
          results[i][j] = -1;
       }
-    }
+   }
 
-   if(rank == 0) computeOnGPU(&count, &N, &K, &D, &tCountSize, myTValues, points, results);
+   if (rank == 0)
+      computeOnGPU(&count, &N, &K, &D, &tCountSize, myTValues, points, results);
 
    // Reduce the local count to get the global count
    MPI_Reduce(&count, &globalCount, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
-   if (rank == 0) {
+   // Gather all the results
+   int *recvcounts = (int *)malloc(size * sizeof(int));
+   int *recvdispls = (int *)malloc(size * sizeof(int));
+
+   for (int i = 0; i < size; i++)
+   {
+      recvcounts[i] = sendcounts[i] * N;
+      recvdispls[i] = displs[i] * N;
+   }
+
+   MPI_Gatherv(&(results[0][0]), tCountSize * N, MPI_INT, &(results[0][0]), recvcounts, recvdispls, MPI_INT, 0, MPI_COMM_WORLD);
+
+   if (rank == 0)
+   {
       printf("Global Count: %d\n", globalCount);
    }
 
@@ -139,6 +155,8 @@ int main(int argc, char *argv[])
    free(sendcounts);
    free(displs);
    free(myTValues);
+   free(recvcounts);
+   free(recvdispls);
 
    MPI_Finalize();
    return 0;
