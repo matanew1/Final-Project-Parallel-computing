@@ -57,7 +57,7 @@ void calculateTValues(int tCount, double **tValues)
    }
 }
 
-void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int **results, int ***global_results)
+void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int **results, int **global_results)
 {
    int *recvcounts = (int *)malloc(size * sizeof(int));
    int *displs = (int *)malloc(size * sizeof(int));
@@ -77,33 +77,24 @@ void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int **
 
    if (rank == 0)
    {
-      *global_results = (int **)malloc(N * sizeof(int *));
+      global_results = (int **)malloc(N * sizeof(int *));
       for (int i = 0; i < N; i++)
       {
-         (*global_results)[i] = (int *)malloc(tCount * sizeof(int));
+         global_results[i] = (int *)malloc(tCount * sizeof(int));
          for (int j = 0; j < tCount; j++)
          {
-            (*global_results)[i][j] = -1;
+            global_results[i][j] = -1;
          }
       }
    }
 
-   printf("rank = %d recvcounts = %d",rank, recvcounts[rank]);
-   printf("rank = %d displs = %d",rank, displs[rank]);
-   for (int i = 0; i < N; i++)
-   {
-      for (int j = 0; j < tCountSize; j++)
-      {
-         printf("%d ",results[i][j]);
-      }
-      printf("\n");
-   }
-   printf("\n");
+   printf("rank = %d recvcounts = %d\n",rank, recvcounts[rank]);
+   printf("rank = %d start at = %d\n",rank, displs[rank]);
 
    // Gather the 2D array results from all processes into global_results on rank 0
-   // MPI_Gatherv(&(results[0][0]), N * tCountSize, MPI_INT,
-   //             &((*global_results)[0][0]), recvcounts, displs, MPI_INT,
-   //             0, MPI_COMM_WORLD);
+   MPI_Gatherv(*results, N * tCountSize, MPI_INT,
+               *global_results, recvcounts, displs, MPI_INT,
+               0, MPI_COMM_WORLD);
 
    free(recvcounts);
    free(displs);
@@ -189,7 +180,7 @@ int main(int argc, char *argv[])
    MPI_Reduce(&count, &globalCount, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
    int **global_results = NULL;
-   gatherResults(rank, size, N, tCount, myTValuesSize, results, &global_results);
+   gatherResults(rank, size, N, tCount, myTValuesSize, results, global_results);
 
    if (rank == 0)
    {
