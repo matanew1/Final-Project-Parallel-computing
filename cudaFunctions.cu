@@ -148,17 +148,6 @@ void computeOnGPU(int *count, int *N, int *K, double *D, int *tCountSize, double
         }
     }
 
-    for (int i = 0; i < *N; i++)
-    {
-        printf("\nP = %d\n",i);
-        for (int j = 0; j < *tCountSize; j++)
-        {
-            printf("\n\tT = %d - [%d] ",j,results[i][j]);
-        }
-        printf("\n");
-    }
-    
-
     // Free device memory
     cudaFree(d_count);
     cudaFree(d_points);
