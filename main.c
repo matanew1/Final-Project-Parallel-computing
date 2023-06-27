@@ -112,12 +112,19 @@ int main(int argc, char *argv[])
    int count = 0;
    int globalCount = 0;
 
-   int **results = (int **)malloc(tCount * sizeof(int *));
-   for (int i = 0; i < tCount; i++) {
-      results[i] = (int *)malloc(N * sizeof(int));
+   int **results = (int **)malloc(N * sizeof(int *));
+   for (int i = 0; i < N; i++) {
+      results[i] = (int *)malloc(tCount * sizeof(int));
    }
+   for (int i = 0; i < N; i++)
+   {
+      for (int j = 0; j < tCount; j++)
+      {
+         results[i][j] = -1;
+      }
+    }
 
-   computeOnGPU(&count, &N, &K, &D, &tCountSize, myTValues, points, results);
+   if(rank == 0) computeOnGPU(&count, &N, &K, &D, &tCountSize, myTValues, points, results);
 
    // Reduce the local count to get the global count
    MPI_Reduce(&count, &globalCount, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
