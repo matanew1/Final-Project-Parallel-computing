@@ -131,13 +131,28 @@ int main(int argc, char *argv[])
    // Reduce the local count to get the global count
    MPI_Reduce(&count, &globalCount, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
-   int **global_results = (int **)malloc(N * sizeof(int *));
-   for (int i = 0; i < N; i++)
+   // Gather the counts of each process
+   int *recvcounts = NULL;
+   int *displs = NULL;
+   if (rank == 0)
    {
-      results[i] = (int *)malloc(tCount * sizeof(int));
+      recvcounts = (int *)malloc(size * sizeof(int));
+      displs = (int *)malloc(size * sizeof(int));
+   }
+   MPI_Gather(&count, 1, MPI_INT, recvcounts, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+   // Calculate the displacements for the gather operation
+   if (rank == 0)
+   {
+      displs[0] = 0;
+      for (int i = 1; i < size; i++)
+      {
+         displs[i] = displs[i - 1] + recvcounts[i - 1];
+      }
    }
 
-   MPI_Gather(results, N*tCountSize, MPI_INT, global_results, N*tCount, MPI_INT, 0, MPI_COMM_WORLD);
+   // Gather all the individual matrices into the global matrix
+   MPI_Gatherv(&(results[0][0]), count, MPI_INT, &(results[0][0]), recvcounts, displs, MPI_INT, 0, MPI_COMM_WORLD);
 
    if (rank == 0)
    {
@@ -158,8 +173,8 @@ int main(int argc, char *argv[])
    free(sendcounts);
    free(displs);
    free(myTValues);
-   // free(recvcounts);
-   // free(recvdispls);
+   free(recvcounts);
+   free(recvdispls);
 
    MPI_Finalize();
    return 0;
