@@ -4,23 +4,14 @@
 #include <stdlib.h>
 #include "myProto.h"
 /*
-mpiCudaOpemMP:22952 terminated with signal 11 at PC=556549c3ee72 SP=7ffef063f1b0.  Backtrace:
-./mpiCudaOpemMP(+0x2e72)[0x556549c3ee72]
-/lib/x86_64-linux-gnu/libc.so.6(+0x29d90)[0x7f2715429d90]
-/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x80)[0x7f2715429e40]
-./mpiCudaOpemMP(+0x2565)[0x556549c3e565]
 Global Count: 3
-Abort(473004302) on node 0 (rank 0 in comm 0): Fatal error in internal_Gatherv: Message truncated, error stack:
-internal_Gatherv(156).....................: MPI_Gatherv(sendbuf=0x55836a288880, sendcount=100, MPI_INT, recvbuf=0x55836a5d7520, recvcounts=0x55836a2a9cf0, displs=0x55836a2a9d10, MPI_INT, 0, MPI_COMM_WORLD) failed
-MPID_Gatherv(468).........................: 
-MPIDI_Gatherv_intra_composition_alpha(726): 
-MPIDI_NM_mpi_gatherv(153).................: 
-MPIR_Gatherv_impl(1092)...................: 
-MPIR_Gatherv_allcomm_auto(1037)...........: 
-MPIR_Gatherv_allcomm_linear(82)...........: 
-MPIR_Localcopy(166).......................: 
-do_localcopy(42)..........................: Message truncated; 400 bytes received but buffer size is 100
-make: *** [Makefile:12: run] Error 14
+
+mpiCudaOpemMP:23294 terminated with signal 11 at PC=555fed1a4e72 SP=7ffda19c0c70.  Backtrace:
+./mpiCudaOpemMP(+0x2e72)[0x555fed1a4e72]
+/lib/x86_64-linux-gnu/libc.so.6(+0x29d90)[0x7ff111a29d90]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x80)[0x7ff111a29e40]
+./mpiCudaOpemMP(+0x2565)[0x555fed1a4565]
+make: *** [Makefile:12: run] Error 1
 */
 
 int main(int argc, char *argv[])
@@ -159,12 +150,13 @@ int main(int argc, char *argv[])
       global_results = (int **)malloc(N * sizeof(int *));
       for (int i = 0; i < N; i++)
       {
-         global_results[i] = (int *)malloc(tCount * sizeof(int));
+         global_results[i] = (int *)malloc(tCountSize * sizeof(int)); // Update the size to tCountSize
       }
    }
 
+
    // Gather results from all processes into global_results on rank 0
-   MPI_Gatherv(*results, tCountSize * N, MPI_INT, *global_results, sendcounts, displs, MPI_INT, 0, MPI_COMM_WORLD);
+   MPI_Gatherv(*results, tCountSize, MPI_INT, *global_results, sendcounts, displs, MPI_INT, 0, MPI_COMM_WORLD); // Update the count to tCountSize
 
    if (rank == 0)
    {
