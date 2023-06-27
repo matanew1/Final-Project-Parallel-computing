@@ -1,0 +1,7 @@
+
+mpiCudaOpemMP:39541 terminated with signal 11 at PC=560f9ed80b87 SP=7fffd2a18e70.  Backtrace:
+./mpiCudaOpemMP(+0x2b87)[0x560f9ed80b87]
+./mpiCudaOpemMP(+0x3094)[0x560f9ed81094]
+/lib/x86_64-linux-gnu/libc.so.6(+0x29d90)[0x7ffb43e29d90]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x80)[0x7ffb43e29e40]
+./mpiCudaOpemMP(+0x2585)[0x560f9ed80585]

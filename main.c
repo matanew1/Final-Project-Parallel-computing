@@ -88,12 +88,20 @@ void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int **
       }
    }
 
-   printf("%d %d",rank,recvcounts[rank]);
-   printf("%d (%d %d)",rank,displs[0],displs[1]);
-   // // Gather the 2D array results from all processes into global_results on rank 0
-   // MPI_Gatherv(&(results[0][0]), N * tCountSize, MPI_INT,
-   //             &((*global_results)[0][0]), recvcounts, displs, MPI_INT,
-   //             0, MPI_COMM_WORLD);
+   for (int i = 0; i < N; i++)
+   {
+      for (int j = 0; j < tCountSize; j++)
+      {
+         printf("%d ",results[i][j]);
+      }
+      printf("\n");
+   }
+   printf("\n");
+   MPI_Barrier(MPI_COMM_WORLD);
+   // Gather the 2D array results from all processes into global_results on rank 0
+   MPI_Gatherv(&(results[0][0]), N * tCountSize, MPI_INT,
+               &((*global_results)[0][0]), recvcounts, displs, MPI_INT,
+               0, MPI_COMM_WORLD);
 
    free(recvcounts);
    free(displs);
@@ -184,16 +192,7 @@ int main(int argc, char *argv[])
    if (rank == 0)
    {
       printf("Global Count: %d\n", globalCount);
-      for (int i = 0; i < N; i++)
-      {
-         for (int j = 0; j < tCount; j++)
-         {
-            printf("%d ",global_results[i][j]);
-         }
-         printf("\n");
-      }
       
-
       // Deallocate global_results memory
       for (int i = 0; i < N; i++)
       {
