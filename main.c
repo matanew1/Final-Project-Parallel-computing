@@ -132,6 +132,20 @@ int main(int argc, char *argv[])
    MPI_Reduce(&count, &globalCount, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
    int **global_results = NULL;
+   if (rank == 0)
+   {
+      printf("Global Count: %d\n", globalCount);
+
+      global_results = (int **)malloc(N * sizeof(int *));
+      for (int i = 0; i < N; i++)
+      {
+         global_results[i] = (int *)malloc(tCount * sizeof(int));
+      }
+   }
+
+   // Gather results from all processes into global_results on rank 0
+   MPI_Gather(*results, N * tCountSize, MPI_INT, *global_results, N * tCountSize, MPI_INT, 0, MPI_COMM_WORLD);
+
 
    if (rank == 0)
    {
@@ -153,6 +167,16 @@ int main(int argc, char *argv[])
    free(sendcounts);
    free(displs);
    free(myTValues);
+   for (int i = 0; i < N; i++)
+   {
+      free(results[i]);
+   }
+   free(results);
+   for (int i = 0; i < N; i++)
+   {
+      free(global_results[i]);
+   }
+   free(global_results);
 
    MPI_Finalize();
    return 0;
