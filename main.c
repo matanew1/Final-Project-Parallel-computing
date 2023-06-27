@@ -57,7 +57,7 @@ void calculateTValues(int tCount, double **tValues)
    }
 }
 
-void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int **results, int *global_results)
+void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int *results, int *global_results)
 {
    int *recvcounts = (int *)malloc(size * sizeof(int));
    int *displs = (int *)malloc(size * sizeof(int));
@@ -75,18 +75,8 @@ void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int **
       displs[i] = displs[i - 1] + recvcounts[i - 1];
    }
 
-   // Flatten the local matrix
-   int *flattened_data = (int *)malloc(N * tCountSize * sizeof(int));
-   for (int i = 0; i < N; i++)
-   {
-      for (int j = 0; j < tCountSize; j++)
-      {
-         flattened_data[i * tCountSize + j] = results[i][j];
-      }
-   }
-
    // Gather the 2D array results from all processes into global_results on rank 0
-   MPI_Gatherv(flattened_data, N * tCountSize, MPI_INT,
+   MPI_Gatherv(results, N * tCountSize, MPI_INT,
                global_results, recvcounts, displs, MPI_INT,
                0, MPI_COMM_WORLD);
 
@@ -157,18 +147,14 @@ int main(int argc, char *argv[])
    int count = 0;
    int globalCount = 0;
 
-   int **results = (int **)malloc(N * sizeof(int *));
-   for (int i = 0; i < N; i++)
+   int *results = (int *)malloc(N * tCountSize * sizeof(int));
+   for (int i = 0; i < N * tCountSize; i++)
    {
-      results[i] = (int *)malloc(myTValuesSize * sizeof(int));
-      for (int j = 0; j < myTValuesSize; j++)
-      {
-         results[i][j] = -1;
-      }
+      results[i] = -1;     
    }
 
    // Compute results on GPU
-   computeOnGPU(&count, &N, &K, &D, &myTValuesSize, myTValues, points, results);
+   if (rank == 0 ) computeOnGPU(&count, &N, &K, &D, &myTValuesSize, myTValues, points, results);
 
    // Reduce the local count to get the global count
    MPI_Reduce(&count, &globalCount, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -188,14 +174,14 @@ int main(int argc, char *argv[])
    {
       printf("Global Count: %d\n", globalCount);
 
-      // for (int i = 0; i < tCount; i++)
-      // {
-      //    printf("current t %d\n",i);
-      //    for (int j = 0; j < N; j++) {
-      //       printf("\tp[%d] = %d ",j,global_results[i*N+j]);
-      //    }
-      //    printf("\n");
-      // }
+      for (int i = 0; i < tCount; i++)
+      {
+         printf("current t %d\n",i);
+         for (int j = 0; j < N; j++) {
+            printf("\tp[%d] = %d ",j,global_results[i*N+j]);
+         }
+         printf("\n");
+      }
       
       // Deallocate global_results memory
       free(global_results);
@@ -208,10 +194,6 @@ int main(int argc, char *argv[])
    free(sendcounts);
    free(displs);
    free(myTValues);
-   for (int i = 0; i < N; i++)
-   {
-      free(results[i]);
-   }
    free(results);
 
    MPI_Finalize();
