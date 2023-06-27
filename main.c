@@ -57,7 +57,7 @@ void calculateTValues(int tCount, double **tValues)
    }
 }
 
-void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int **results, int **global_results)
+void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int **results, int *global_results)
 {
    int *recvcounts = (int *)malloc(size * sizeof(int));
    int *displs = (int *)malloc(size * sizeof(int));
@@ -75,25 +75,19 @@ void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int **
       displs[i] = displs[i - 1] + recvcounts[i - 1];
    }
 
-   if (rank == 0)
+   // Flatten the local matrix
+   int *flattened_data = (int *)malloc(N * tCountSize * sizeof(int));
+   for (int i = 0; i < N; i++)
    {
-      global_results = (int **)malloc(N * sizeof(int *));
-      for (int i = 0; i < N; i++)
+      for (int j = 0; j < tCountSize; j++)
       {
-         global_results[i] = (int *)malloc(tCount * sizeof(int));
-         for (int j = 0; j < tCount; j++)
-         {
-            global_results[i][j] = -1;
-         }
+         flattened_data[i * tCountSize + j] = results[i][j];
       }
    }
 
-   printf("rank = %d recvcounts = %d\n",rank, recvcounts[rank]);
-   printf("rank = %d start at = %d\n",rank, displs[rank]);
-
    // Gather the 2D array results from all processes into global_results on rank 0
-   MPI_Gatherv(*results, N * tCountSize, MPI_INT,
-               *global_results, recvcounts, displs, MPI_INT,
+   MPI_Gatherv(flattened_data, N * tCountSize, MPI_INT,
+               global_results, recvcounts, displs, MPI_INT,
                0, MPI_COMM_WORLD);
 
    free(recvcounts);
@@ -179,18 +173,31 @@ int main(int argc, char *argv[])
    // Reduce the local count to get the global count
    MPI_Reduce(&count, &globalCount, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
-   int **global_results = NULL;
+   int *global_results = NULL;
+   if (rank == 0)
+   {
+      global_results = (int *)malloc(N * tCount * sizeof(int));
+      for (int i = 0; i < N * tCount; i++)
+      {
+         global_results[i] = -1;         
+      }
+   }
    gatherResults(rank, size, N, tCount, myTValuesSize, results, global_results);
 
    if (rank == 0)
    {
       printf("Global Count: %d\n", globalCount);
-      
-      // Deallocate global_results memory
+
       for (int i = 0; i < N; i++)
       {
-         free(global_results[i]);
+         printf("current point %d\n",i);
+         for (int j = 0; j < tCount; j++) {
+            printf("t[%d] = %d ",j,global_results[i*tCount+j]);
+         }
+         printf("\n");
       }
+      
+      // Deallocate global_results memory
       free(global_results);
    }
 
