@@ -33,24 +33,20 @@ __global__ void checkProximityCriteria(int *count, Point *points, double *tValue
                     int currentCount = atomicAdd(count, 1);
                     if (currentCount < K)
                     {
-                        printf("t = %d || point %d has %d count\n",idx, points[i].id, currentCount + 1);
-                        atomicExch(&results[i * tCount + idx], points[i].id);
+                        int index = i * tCount + idx;
+                        atomicExch(&results[index], points[i].id);
+
+                        // Ensure all threads have finished updating results before continuing
+                        __threadfence();
+
+                        // Synchronize all threads to ensure results[index] is visible to all threads
+                        __syncthreads();
+
+                        // Check if all K results have been found
+                        if (*count >= K)
+                            return;
                     }
                 }
-
-                if (*count >= K)
-                {
-                    // Ensure all threads have finished updating count before breaking
-                    __threadfence();
-                    break;
-                }
-            }
-
-            if (*count >= K)
-            {
-                // Ensure all threads have finished updating count before breaking
-                __threadfence();
-                break;
             }
         }
     }
