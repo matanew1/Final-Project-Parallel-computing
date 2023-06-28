@@ -29,7 +29,7 @@ __global__ void checkProximityCriteria(Point *points, double *tValues, const int
             {
                 double distance = calcDistance(&points[i], &points[j], &t);
                 
-                printf("T = %d || count = %d\n",idx, count);
+                // printf("T = %d || count = %d\n",idx, count);
                 if (distance <= D && distance > 0)
                 {
                     count++;
@@ -38,7 +38,7 @@ __global__ void checkProximityCriteria(Point *points, double *tValues, const int
                             if ( i == idx ) {
                                 for (int j = 0; j < CONSTRAINTS; j++) { 
                                     if (results[i * tCount + j] == -1) {
-                                        printf("t = %d || with point %d || res_index = %d\n",idx,points[i].id, i * tCount + j);
+                                        // printf("t = %d || with point %d || res_index = %d\n",idx,points[i].id, i * tCount + j);
                                         atomicExch(&results[i * tCount + j], points[i].id); 
                                         return;  
                                     }
@@ -57,8 +57,12 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
     // Error code to check return values for CUDA calls
     cudaError_t err = cudaSuccess;
 
-    int threadPerBlock = *tCountSize < BLOCK_SIZE ? *tCountSize : BLOCK_SIZE;
-    int blocksPerGrid = 1;
+    // TODO: need to fix this section !!!/////////////////////////////
+    int threadPerBlock = min(BLOCK_SIZE, *tCountSize);              //
+    int blocksPerGrid = (*N + threadPerBlock - 1) / threadPerBlock; //
+    printf("*tCountSize = %d threadPerBlock=%d blocksPerGrid=%d\n", //
+    *tCountSize,threadPerBlock,blocksPerGrid);                      //
+    //////////////////////////////////////////////////////////////////
 
     Point *d_points = NULL;
     double *d_tValues = NULL;
@@ -122,15 +126,15 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
         exit(EXIT_FAILURE);
     }
 
-    for (int i = 0; i < *tCountSize; i++)
-    {
-        printf("current t %d\n", i);
-        for (int j = 0; j < CONSTRAINTS; j++)
-        {
-            printf("\tp[%d] = %d ", j, results[i * (CONSTRAINTS) + j]);
-        }
-        printf("\n");
-    }
+    // for (int i = 0; i < *tCountSize; i++)
+    // {
+    //     printf("current t %d\n", i);
+    //     for (int j = 0; j < CONSTRAINTS; j++)
+    //     {
+    //         printf("\tp[%d] = %d ", j, results[i * (CONSTRAINTS) + j]);
+    //     }
+    //     printf("\n");
+    // }
 
     // Free device memory
     cudaFree(d_points);

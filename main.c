@@ -53,7 +53,7 @@ void calculateTValues(int tCount, double **tValues)
 #pragma omp parallel for
    for (int i = 0; i < tCount; ++i)
    {
-      (*tValues)[i] = 2.0 * i / tCount - 1.0;
+      (*tValues)[i] = 2 * i / (double)tCount - 1;
    }
 }
 
@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
       results[i] = -1;
 
    // Compute results on GPU
-   if (rank == 0 ) computeOnGPU(&N, &K, &D, &myTValuesSize, myTValues, points, results);
+   computeOnGPU(&N, &K, &D, &myTValuesSize, myTValues, points, results);
 
    int *global_results = NULL;
    if (rank == 0)
