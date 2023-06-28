@@ -90,13 +90,12 @@ int main(int argc, char *argv[])
 
    if (rank == 0)
    {
-      writeOutputFile("output.txt", tCount, global_results, points);
+      writeOutputFile("output.txt", tCount, global_results, points, N);
 
-      // Deallocate global_results memory
-      free(global_results);
    }
 
    // Deallocate memory
+   free(global_results);
    free(points);
    free(tValues);
    MPI_Type_free(&MPI_POINT);

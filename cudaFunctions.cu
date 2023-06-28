@@ -15,62 +15,53 @@ __device__ double calcDistance(const Point *p1, const Point *p2, double *t)
     return distance;
 }
 
+__device__ bool isProximityCriteriaMet(const Point *p1, const Point *p2, double *t, double D)
+{
+    double distance = calcDistance(p1, p2, t);
+    // printf("t = %.3lf || point %d, point %d || distance = %.3lf\n",*t,p1->id,p2->id,distance);
+    return distance <= D;
+}
+
+__device__ void updateResults(int idx, int *results, int proximityPointId)
+{
+    for (int j = 0; j < CONSTRAINTS; j++)
+    {
+        if (results[idx * CONSTRAINTS + j] == -1)
+        {
+            atomicExch(&results[idx * CONSTRAINTS + j], proximityPointId);
+            // printf("res_p%d || idx_t = %d || with point %d || res_index = %d\n",
+            // j,idx,proximityPointId, idx * CONSTRAINTS + j);
+            break;
+        }
+    }
+}
+
 __global__ void checkProximityCriteria(Point *points, double *tValues, const int tCount, const int N, const int K, const double D, int *results)
 {
-    int count = 0;
-    int finish = 0;
     int idx = blockIdx.x * blockDim.x + threadIdx.x; // point idx
 
-    if (idx < tCount) // specific t
+    if (idx >= tCount) return; // specific t
+
+    double t = tValues[idx];
+    // printf("t = %d value = %.3lf\n",idx, t);
+    int count = 0;
+    int finish = 0;
+
+    for (int i = 0; i < N; i++)
     {
-        double t = tValues[idx];
-
-        for (int i = 0; i < N; i++)
+        count = 0;
+        finish = 0;
+        for (int j = 0; j < N; j++)
         {
-            count = 0;
-            finish = 0;
-            for (int j = 0; j < N; j++)
+            if (finish == 1) break;
+            if (i != j && isProximityCriteriaMet(&points[i], &points[j], &t, D))
             {
-                if (finish == 1) {
-                    break;
-                }
-                if (i != j)
+                count++;
+                if (count == K)
                 {
-                    
-                    double distance = calcDistance(&points[i], &points[j], &t);
-                    // printf("idx_t = %d - t = %.3lf || point %d, point %d || distance = %.3lf\n",idx,t,points[i].id,points[j].id,distance);
-
-                    if (distance <= D)
-                    {
-                        // printf("t = %.3lf || point %d, point %d || distance = %.3lf\n",t,points[i].id,points[j].id,distance);
-                        count++;
-                        if (count == K)
-                        {
-                            // printf("\nPOINT %d inside ! at t = %.3lf\n",points[i].id,t);
-                            int proximityPointId = points[i].id;
-                            for (int i = 0; i < tCount; i++)
-                            {
-                                if (finish == 1) {
-                                    break;
-                                }
-                                if (i == idx)
-                                {
-                                    for (int j = 0; j < CONSTRAINTS; j++)
-                                    {
-                                        if (results[i * CONSTRAINTS + j] == -1)
-                                        {
-                                            // printf("i=%d j=%d || distance = %.3lf || count = %d || t = %.3lf - idx_t = %d || with point %d || res_index = %d\n",
-                                            // i,j,distance,count, t,idx,proximityPointId, i * CONSTRAINTS + j);
-                                            atomicExch(&results[i * CONSTRAINTS + j], proximityPointId);
-                                            finish = 1;
-                                            break;
-                                        }
-                                    }
- 
-                                }
-                            }
-                        }
-                    }
+                    int proximityPointId = points[i].id;
+                    updateResults(idx, results, proximityPointId);
+                    finish = 1;
                 }
             }
         }
@@ -151,15 +142,15 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
         exit(EXIT_FAILURE);
     }
 
-    // for (int i = 0; i < *tCountSize; i++)
-    // {
-    //     printf("current t %d\n", i);
-    //     for (int j = 0; j < CONSTRAINTS; j++)
-    //     {
-    //         printf("\tp[%d] = %d ", j, results[i * (CONSTRAINTS) + j]);
-    //     }
-    //     printf("\n");
-    // }
+    for (int i = 0; i < *tCountSize; i++)
+    {
+        printf("current t %d\n", i);
+        for (int j = 0; j < CONSTRAINTS; j++)
+        {
+            printf("\tp[%d] = %d ", j, results[i * (CONSTRAINTS) + j]);
+        }
+        printf("\n");
+    }
 
     // Free device memory
     cudaFree(d_points);
