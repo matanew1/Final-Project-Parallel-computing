@@ -1,2 +1,5 @@
-Points pointID0, pointID1, pointID3, satisfy Proximity Criteria at t2
-Points pointID0, pointID1, pointID2, satisfy Proximity Criteria at t3
+Points pointID0, pointID1, pointID3, satisfy Proximity Criteria at t3
+Points pointID0, pointID1, pointID3, satisfy Proximity Criteria at t4
+Points pointID0, pointID1, pointID2, satisfy Proximity Criteria at t5
+Points pointID0, pointID1, pointID2, satisfy Proximity Criteria at t6
+Points pointID0, pointID1, pointID2, satisfy Proximity Criteria at t7

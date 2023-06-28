@@ -2,6 +2,8 @@
     "files.associations": {
         "random": "cpp",
         "algorithm": "c",
-        "type_traits": "cpp"
+        "type_traits": "cpp",
+        "stdlib.h": "c",
+        "myproto.h": "c"
     }
 }
