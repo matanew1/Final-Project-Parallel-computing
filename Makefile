@@ -9,7 +9,7 @@ clean:
 	rm -f *.o ./mpiCudaOpemMP
 
 run:
-	mpiexec -np 4 ./mpiCudaOpemMP
+	mpiexec -np 3 ./mpiCudaOpemMP
 
 runOn2:
 	mpiexec -np 4 -machinefile  mf  -map-by  node  ./mpiCudaOpemMP

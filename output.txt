@@ -1,4 +1,3 @@
 Points pointID0, pointID1, pointID3, satisfy Proximity Criteria at t9
 Points pointID0, pointID1, pointID3, satisfy Proximity Criteria at t10
 Points pointID0, pointID1, pointID3, satisfy Proximity Criteria at t11
-Points pointID0, pointID2, pointID3, satisfy Proximity Criteria at t13
