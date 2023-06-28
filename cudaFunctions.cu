@@ -18,34 +18,59 @@ __device__ double calcDistance(const Point *p1, const Point *p2, double *t)
 __global__ void checkProximityCriteria(Point *points, double *tValues, const int tCount, const int N, const int K, const double D, int *results)
 {
     int count = 0;
+    int finish = 0;
     int idx = blockIdx.x * blockDim.x + threadIdx.x; // point idx
-    if (idx < tCount)
+
+    if (idx < tCount) // specific t
     {
         double t = tValues[idx];
 
         for (int i = 0; i < N; i++)
         {
-            for (int j = 0; j < N && i != j; j++)
+            count = 0;
+            finish = 0;
+            for (int j = 0; j < N; j++)
             {
-                double distance = calcDistance(&points[i], &points[j], &t);
-                
-                // printf("T = %d || count = %d\n",idx, count);
-                if (distance <= D && distance > 0)
+                if (finish == 1) {
+                    break;
+                }
+                if (i != j)
                 {
-                    count++;
-                    if (count == K) {                        
-                        for (int i = 0; i < tCount; i++) {                      
-                            if ( i == idx ) {
-                                for (int j = 0; j < CONSTRAINTS; j++) { 
-                                    if (results[i * tCount + j] == -1) {
-                                        // printf("t = %d || with point %d || res_index = %d\n",idx,points[i].id, i * tCount + j);
-                                        atomicExch(&results[i * tCount + j], points[i].id); 
-                                        return;  
+                    
+                    double distance = calcDistance(&points[i], &points[j], &t);
+                    // printf("idx_t = %d - t = %.3lf || point %d, point %d || distance = %.3lf\n",idx,t,points[i].id,points[j].id,distance);
+
+                    if (distance <= D)
+                    {
+                        // printf("t = %.3lf || point %d, point %d || distance = %.3lf\n",t,points[i].id,points[j].id,distance);
+                        count++;
+                        if (count == K)
+                        {
+                            // printf("\nPOINT %d inside ! at t = %.3lf\n",points[i].id,t);
+                            int proximityPointId = points[i].id;
+                            for (int i = 0; i < tCount; i++)
+                            {
+                                if (finish == 1) {
+                                    break;
+                                }
+                                if (i == idx)
+                                {
+                                    for (int j = 0; j < CONSTRAINTS; j++)
+                                    {
+                                        if (results[i * CONSTRAINTS + j] == -1)
+                                        {
+                                            // printf("i=%d j=%d || distance = %.3lf || count = %d || t = %.3lf - idx_t = %d || with point %d || res_index = %d\n",
+                                            // i,j,distance,count, t,idx,proximityPointId, i * CONSTRAINTS + j);
+                                            atomicExch(&results[i * CONSTRAINTS + j], proximityPointId);
+                                            finish = 1;
+                                            break;
+                                        }
                                     }
+ 
                                 }
                             }
-                        }                                                                                       
-                    }                          
+                        }
+                    }
                 }
             }
         }
@@ -59,9 +84,9 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
 
     // TODO: need to fix this section !!!/////////////////////////////
     int threadPerBlock = min(BLOCK_SIZE, *tCountSize);              //
-    int blocksPerGrid = (*N + threadPerBlock - 1) / threadPerBlock; //
-    printf("*tCountSize = %d threadPerBlock=%d blocksPerGrid=%d\n", //
-    *tCountSize,threadPerBlock,blocksPerGrid);                      //
+    int blocksPerGrid = *tCountSize / BLOCK_SIZE < 1 ? 1 : *tCountSize / BLOCK_SIZE; //
+    // printf("*tCountSize = %d threadPerBlock=%d blocksPerGrid=%d\n", //
+    //  *tCountSize,threadPerBlock,blocksPerGrid);                      //
     //////////////////////////////////////////////////////////////////
 
     Point *d_points = NULL;

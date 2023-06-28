@@ -1,0 +1,1 @@
+Points 0 ,1 ,2 ,3 satisfy Proximity Criteria at t = -1.00

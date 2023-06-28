@@ -32,6 +32,8 @@ int satisfies_proximity_criteria(Point* points, int n, int k, double d, double t
                 if (distance < d) {
                     count++;
                     if (count >= k - 1) {
+                        printf("count = %d || t = %.3lf || with point %d\n",
+                        count, t,points[i].id);
                         return 1;
                     }
                 }

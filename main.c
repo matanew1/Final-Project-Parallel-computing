@@ -50,10 +50,10 @@ void calculateTValues(int tCount, double **tValues)
    *tValues = (double *)malloc(tCount * sizeof(double));
 
    // calculate all t points
-#pragma omp parallel for
+// #pragma omp parallel for
    for (int i = 0; i < tCount; ++i)
    {
-      (*tValues)[i] = 2 * i / (double)tCount - 1;
+      (*tValues)[i] = (2.0 * i / tCount) - 1;
    }
 }
 
@@ -167,16 +167,16 @@ int main(int argc, char *argv[])
 
    if (rank == 0)
    {
-      // printf("Global Count: %d\n", globalCount);
+      printf("\n");
 
-      // for (int i = 0; i < tCount; i++)
-      // {
-      //    printf("current t %d\n",i);
-      //    for (int j = 0; j < N; j++) {
-      //       printf("\tp[%d] = %d ",j,global_results[i*N+j]);
-      //    }
-      //    printf("\n");
-      // }
+      for (int i = 0; i < tCount; i++)
+      {
+         printf("current t %d\n",i);
+         for (int j = 0; j < CONSTRAINTS; j++) {
+            printf("\tp[%d] = %d ",j,global_results[i*CONSTRAINTS+j]);
+         }
+         printf("\n");
+      }
       
       // Deallocate global_results memory
       free(global_results);
