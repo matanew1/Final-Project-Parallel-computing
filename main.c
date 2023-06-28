@@ -84,6 +84,29 @@ void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int *r
    free(displs);
 }
 
+void writeOutputFile(const char* filename, int tCount, int** results, Point* points) {
+   FILE* file = fopen(filename, "w");
+   if (!file) {
+      fprintf(stderr, "Failed to open output file.\n");
+      MPI_Finalize();
+      exit(1);
+   }
+
+   for (int i = 0; i < tCount; i++) {
+      fprintf(file, "Points ");
+      for (int j = 0; j < CONSTRAINTS; j++) {
+         if (results[i][j] != -1) {
+            fprintf(file, "pointID%d, ", results[i][j]);
+         }
+      }
+      fprintf(file, "satisfy Proximity Criteria at t = %lf\n", calculateTValue(i, tCount));
+   }
+
+   fclose(file);
+}
+
+
+
 int main(int argc, char *argv[])
 {
    int rank, size;
@@ -162,11 +185,9 @@ int main(int argc, char *argv[])
       {
          global_results[i] = -1;         
       }
-   }
-   gatherResults(rank, size, N, tCount, myTValuesSize, results, global_results);
+      gatherResults(rank, size, N, tCount, myTValuesSize, results, global_results);
 
-   if (rank == 0)
-   {
+      writeOutputFile("output.txt", tCount, global_results, points);
       printf("\n");
 
       for (int i = 0; i < tCount; i++)
