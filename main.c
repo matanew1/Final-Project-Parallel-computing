@@ -84,7 +84,7 @@ void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int *r
    free(displs);
 }
 
-void writeOutputFile(const char* filename, int tCount, int** results, Point* points) {
+void writeOutputFile(const char* filename, int tCount, int* results, Point* points) {
    FILE* file = fopen(filename, "w");
    if (!file) {
       fprintf(stderr, "Failed to open output file.\n");
@@ -93,13 +93,22 @@ void writeOutputFile(const char* filename, int tCount, int** results, Point* poi
    }
 
    for (int i = 0; i < tCount; i++) {
-      fprintf(file, "Points ");
-      for (int j = 0; j < CONSTRAINTS; j++) {
-         if (results[i][j] != -1) {
-            fprintf(file, "pointID%d, ", results[i][j]);
+      int print = 1;
+      for (int j = 0; j < CONSTRAINTS; j++)
+      {
+         if (results[i * CONSTRAINTS + j] == -1) {
+            print = 0;
          }
       }
-      fprintf(file, "satisfy Proximity Criteria at t = %lf\n", calculateTValue(i, tCount));
+      if (print) {
+         fprintf(file, "Points ");
+         for (int j = 0; j < CONSTRAINTS; j++) {
+            if (results[i * CONSTRAINTS + j] != -1) {
+               fprintf(file, "pointID%d, ", results[i * CONSTRAINTS + j]);
+            }
+         }
+         fprintf(file, "satisfy Proximity Criteria at t%d\n", i);
+      }
    }
 
    fclose(file);
@@ -185,20 +194,14 @@ int main(int argc, char *argv[])
       {
          global_results[i] = -1;         
       }
-      gatherResults(rank, size, N, tCount, myTValuesSize, results, global_results);
+   }
+   
+   gatherResults(rank, size, N, tCount, myTValuesSize, results, global_results);
 
+   if (rank == 0)
+   {
       writeOutputFile("output.txt", tCount, global_results, points);
-      printf("\n");
-
-      for (int i = 0; i < tCount; i++)
-      {
-         printf("current t %d\n",i);
-         for (int j = 0; j < CONSTRAINTS; j++) {
-            printf("\tp[%d] = %d ",j,global_results[i*CONSTRAINTS+j]);
-         }
-         printf("\n");
-      }
-      
+          
       // Deallocate global_results memory
       free(global_results);
    }
@@ -215,13 +218,3 @@ int main(int argc, char *argv[])
    MPI_Finalize();
    return 0;
 }
-
-/*
-mpiCudaOpemMP:39929 terminated with signal 11 at PC=56079a8f0b91 SP=7ffeb0cee360.  Backtrace:
-./mpiCudaOpemMP(+0x2b91)[0x56079a8f0b91]
-./mpiCudaOpemMP(+0x309e)[0x56079a8f109e]
-/lib/x86_64-linux-gnu/libc.so.6(+0x29d90)[0x7f656f429d90]
-/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x80)[0x7f656f429e40]
-./mpiCudaOpemMP(+0x2585)[0x56079a8f0585]
-make: *** [Makefile:12: run] Error 1
-*/

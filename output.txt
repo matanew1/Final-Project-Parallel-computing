@@ -1,1 +1,2 @@
-Points 0 ,1 ,2 ,3 satisfy Proximity Criteria at t = -1.00
+Points pointID0, pointID1, pointID3, satisfy Proximity Criteria at t2
+Points pointID0, pointID1, pointID2, satisfy Proximity Criteria at t3
