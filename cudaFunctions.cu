@@ -29,14 +29,22 @@ __global__ void checkProximityCriteria(Point *points, double *tValues, const int
             {
                 double distance = calcDistance(&points[i], &points[j], &t);
                 
+                printf("T = %d || count = %d\n",idx, count);
                 if (distance <= D && distance > 0)
                 {
                     count++;
-                    if (count == K) {
-                        // int index = idx * CONSTRAINTS + j;
-                        printf("t = %d || with point %d\n",idx,points[i].id);
-                        // atomicExch(&results[index], points[i].id);
-                        return;
+                    if (count == K) {                        
+                        for (int i = 0; i < tCount; i++) {                      
+                            if ( i == idx ) {
+                                for (int j = 0; j < CONSTRAINTS; j++) { 
+                                    if (results[i * tCount + j] == -1) {
+                                        printf("t = %d || with point %d || res_index = %d\n",idx,points[i].id, i * tCount + j);
+                                        atomicExch(&results[i * tCount + j], points[i].id); 
+                                        return;  
+                                    }
+                                }
+                            }
+                        }                                                                                       
                     }                          
                 }
             }
@@ -114,15 +122,15 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
         exit(EXIT_FAILURE);
     }
 
-    // for (int i = 0; i < *tCountSize; i++)
-    // {
-    //     printf("current t %d\n", i);
-    //     for (int j = 0; j < CONSTRAINTS; j++)
-    //     {
-    //         printf("\tp[%d] = %d ", j, results[i * (CONSTRAINTS) + j]);
-    //     }
-    //     printf("\n");
-    // }
+    for (int i = 0; i < *tCountSize; i++)
+    {
+        printf("current t %d\n", i);
+        for (int j = 0; j < CONSTRAINTS; j++)
+        {
+            printf("\tp[%d] = %d ", j, results[i * (CONSTRAINTS) + j]);
+        }
+        printf("\n");
+    }
 
     // Free device memory
     cudaFree(d_points);
