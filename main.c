@@ -5,11 +5,6 @@
 #include <stdlib.h>
 #include "myProto.h"
 
-/*
-Failed to allocate device points (error code CUDA-capable device(s) is/are busy or unavailable)!
-*/
-
-
 int main(int argc, char *argv[])
 {
         int rank, size;
@@ -73,7 +68,6 @@ int main(int argc, char *argv[])
         int myTValuesSize = sendcounts[rank];
         double *myTValues = (double *)malloc(myTValuesSize * sizeof(double));
 
-        // printf("rank = %d myTValuesSize = %d displs=%d\n", rank, myTValuesSize, displs[rank]);
         MPI_Scatterv(tValues, sendcounts, displs, MPI_DOUBLE, myTValues, myTValuesSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
         int count = 0;
@@ -101,16 +95,6 @@ int main(int argc, char *argv[])
         if (rank == 0)
         {
                 writeOutputFile("output.txt", tCount, global_results, points, N);
-                // for (int i = 0; i < tCount; i++)
-                // {
-                //    printf("current t %d\n", i);
-                //    for (int j = 0; j < CONSTRAINTS; j++)
-                //    {
-                //       printf("\tp[%d] = %d ", j, global_results[i * CONSTRAINTS + j]);
-                //    }
-                //    printf("\n");
-                // }
-                // printf("\n");
         }
 
         // Deallocate memory
