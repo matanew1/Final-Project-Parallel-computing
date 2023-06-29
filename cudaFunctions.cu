@@ -25,14 +25,15 @@ __device__ void updateResults(int idx, int *results, int proximityPointId)
 {
     for (int j = 0; j < CONSTRAINTS; j++)
     {
-        int currentValue = atomicCAS(&results[idx * CONSTRAINTS + j], -1, proximityPointId);
-        if (currentValue == -1)
-        {
-            // Successfully updated the result
-            break;
-        }
+        int currentValue = results[idx * CONSTRAINTS + j];
+        if (currentValue != -1)
+            continue;     
+        atomicExch(&results[idx * CONSTRAINTS + j], proximityPointId);
+        printf("t = %d || From %d to %d at %d\n",idx,currentValue, results[idx * CONSTRAINTS + j], idx * CONSTRAINTS + j);
+        return;
     }
 }
+
 
 __global__ void checkProximityCriteria(Point *points, double *tValues, const int tCount, const int N, const int K, const double D, int *results)
 {
@@ -42,15 +43,13 @@ __global__ void checkProximityCriteria(Point *points, double *tValues, const int
 
     double t = tValues[idx];
     int count = 0;
-    int finish = 0;
 
     for (int i = 0; i < N; i++)
     {
         count = 0;
-        finish = 0;
+
         for (int j = 0; j < N; j++)
         {
-            if (finish == 1) break;
             if (i != j && isProximityCriteriaMet(&points[i], &points[j], &t, D))
             {
                 count++;
@@ -58,11 +57,21 @@ __global__ void checkProximityCriteria(Point *points, double *tValues, const int
                 {
                     int proximityPointId = points[i].id;
                     updateResults(idx, results, proximityPointId);
-                    finish = 1;
+                    break;
                 }
             }
         }
     }
+
+    // for (int i = 0; i < tCount; i++)
+    // {
+    //     printf("current t %d\n", i);
+    //     for (int j = 0; j < CONSTRAINTS; j++)
+    //     {
+    //         printf("\tp[%d] = %d ", j, results[i * CONSTRAINTS + j]);
+    //     }
+    //     printf("\n");
+    // }
 }
 
 void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues, Point *points, int *results)
@@ -131,15 +140,15 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
         exit(EXIT_FAILURE);
     }
 
-    for (int i = 0; i < *tCountSize; i++)
-    {
-        printf("current t %d\n", i);
-        for (int j = 0; j < CONSTRAINTS; j++)
-        {
-            printf("\tp[%d] = %d ", j, results[i * CONSTRAINTS + j]);
-        }
-        printf("\n");
-    }
+    // for (int i = 0; i < *tCountSize; i++)
+    // {
+    //     printf("current t %d\n", i);
+    //     for (int j = 0; j < CONSTRAINTS; j++)
+    //     {
+    //         printf("\tp[%d] = %d ", j, results[i * CONSTRAINTS + j]);
+    //     }
+    //     printf("\n");
+    // }
     printf("\n");
     cudaFree(d_points);
     cudaFree(d_tValues);

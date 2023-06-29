@@ -1,5 +1,6 @@
 #include <mpi.h>
 #include <stdio.h>
+#include <string.h>
 #include <omp.h>
 #include <stdlib.h>
 #include "myProto.h"
@@ -69,9 +70,9 @@ int main(int argc, char *argv[])
    int count = 0;
    int globalCount = 0;
 
-   int *results = (int *)malloc(CONSTRAINTS * tCountSize * sizeof(int));
-   for (int i = 0; i < CONSTRAINTS * tCountSize; i++)
-      results[i] = -1;
+   // Allocate and initialize the results array
+   int* results = (int*)malloc(CONSTRAINTS * tCountSize * sizeof(int));
+   memset(results, -1, CONSTRAINTS * tCountSize * sizeof(int));
 
    // Compute results on GPU
    computeOnGPU(&N, &K, &D, &myTValuesSize, myTValues, points, results);
