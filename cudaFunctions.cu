@@ -70,16 +70,28 @@ __global__ void checkProximityCriteria(Point *points, double *tValues, const int
 
 void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues, Point *points, int *results)
 {
+    
     cudaError_t err = cudaSuccess;
     int threadPerBlock = min(BLOCK_SIZE, *tCountSize);
     int blocksPerGrid = (*tCountSize + threadPerBlock - 1) / threadPerBlock;
+
+    size_t freeMem, totalMem;
+    err = cudaMemGetInfo(&freeMem, &totalMem);
+    if (err != cudaSuccess)
+    {
+        fprintf(stderr, "cudaMemGetInfo failed: %s\n", cudaGetErrorString(err));
+        return;
+    }
+
+    printf("Free GPU memory: %lu bytes\n", freeMem);
+    printf("Total GPU memory: %lu bytes\n", totalMem);
 
     // printf("*tCountSize = %d threadPerBlock=%d blocksPerGrid=%d\n", *tCountSize,threadPerBlock,blocksPerGrid);                      
 
     Point *d_points = NULL;
     double *d_tValues = NULL;
     int *d_results = NULL;
-/*Failed to allocate device points (error code out of memory)!*/
+
     err = cudaMalloc((void **)&d_points, (*N) * sizeof(Point));
     if (err != cudaSuccess)
     {
