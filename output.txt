@@ -1,7 +1,6 @@
-Points pointID0, pointID1, pointID3, satisfy Proximity Criteria at t3
-Points pointID0, pointID1, pointID3, satisfy Proximity Criteria at t4
-Points pointID0, pointID1, pointID2, satisfy Proximity Criteria at t5
-Points pointID0, pointID1, pointID2, satisfy Proximity Criteria at t6
-Points pointID0, pointID1, pointID2, satisfy Proximity Criteria at t7
-Points pointID0, pointID1, pointID2, satisfy Proximity Criteria at t8
-Points pointID0, pointID1, pointID2, satisfy Proximity Criteria at t9
+Points pointID0, pointID1, pointID3, satisfy Proximity Criteria at t47
+Points pointID0, pointID1, pointID3, satisfy Proximity Criteria at t48
+Points pointID0, pointID1, pointID3, satisfy Proximity Criteria at t49
+Points pointID0, pointID1, pointID3, satisfy Proximity Criteria at t50
+Points pointID0, pointID1, pointID3, satisfy Proximity Criteria at t51
+Points pointID0, pointID1, pointID3, satisfy Proximity Criteria at t52

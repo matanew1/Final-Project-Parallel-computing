@@ -43,12 +43,11 @@ __global__ void checkProximityCriteria(Point *points, double *tValues, const int
 
     double t = tValues[idx];
     int count = 0;
-    int finish = false;
 
     for (int i = 0; i < N; i++)
     {
         count = 0;
-        for (int j = 0; j < N j++)
+        for (int j = 0; j < N; j++)
         {
             if (i != j && isProximityCriteriaMet(&points[i], &points[j], &t, D))
             {
