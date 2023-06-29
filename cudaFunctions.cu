@@ -24,13 +24,14 @@ __device__ bool isProximityCriteriaMet(const Point *p1, const Point *p2, double 
 __device__ void updateResults(int idx, int *results, int proximityPointId)
 {
     for (int j = 0; j < CONSTRAINTS; j++)
-    {
-        int currentValue = results[idx * CONSTRAINTS + j];
-        if (currentValue != -1)
-            continue;     
-        atomicExch(&results[idx * CONSTRAINTS + j], proximityPointId);
-        printf("t = %d || From %d to %d at %d\n",idx,currentValue, results[idx * CONSTRAINTS + j], idx * CONSTRAINTS + j);
-        return;
+    {   
+        int last = results[idx * CONSTRAINTS + j];
+        int currentValue = atomicCAS(&results[idx * CONSTRAINTS + j], -1, proximityPointId);
+        if (currentValue == -1)
+        {
+            printf("t = %d || From %d to %d at %d\n",idx, last, currentValue , idx * CONSTRAINTS + j);
+            break;
+        }
     }
 }
 
@@ -62,6 +63,7 @@ __global__ void checkProximityCriteria(Point *points, double *tValues, const int
             }
         }
     }
+    __syncthreads();
 
     // for (int i = 0; i < tCount; i++)
     // {
