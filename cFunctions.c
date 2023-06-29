@@ -3,8 +3,9 @@
 #include <stdlib.h>
 #include <mpi.h>
 
-void test(int *data, int n) {
-    printf("TEST");
+void test(int *data, int n)
+{
+   printf("TEST");
 }
 
 void readInputFile(const char *filename, int *N, int *K, double *D, int *tCount, Point **points)
@@ -62,27 +63,22 @@ void calculateTValues(int tCount, double **tValues)
 
 void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int *results, int *global_results)
 {
-   int *recvcounts = (int *)calloc(size, sizeof(int));
-   int *displs = (int *)calloc(size, sizeof(int));
+   int *recvcounts = (int *)malloc(size * sizeof(int));
+   int *displs = (int *)malloc(size * sizeof(int));
 
-   // Calculate the recvcounts and displacements for the 2D array
+   // Calculate the recvcounts for the 2D array
    for (int i = 0; i < size; i++)
    {
-      recvcounts[i] = CONSTRAINTS * tCountSize;
-      displs[i] = 0;
+      recvcounts[i] = CONSTRAINTS * ((i < tCount % size) ? (tCount / size + 1) : (tCount / size));
    }
 
-   if (rank > 0) displs[rank] = displs[rank - 1] + recvcounts[rank];
-       
-    for (int i = 0; i < tCountSize; i++)
-    {
-        for (int j = 0; j < CONSTRAINTS; j++)
-        {
-            printf("%d ",results[i * CONSTRAINTS + j]);
-        }
-        printf("\n");
-    }
-    printf("\n");
+   // Calculate the displacements for the 2D array
+   displs[0] = 0;
+   for (int i = 1; i < size; i++)
+   {
+      displs[i] = displs[i - 1] + recvcounts[i - 1];
+   }
+
    // Gather the 2D array results from all processes into global_results on rank 0
    MPI_Gatherv(results, CONSTRAINTS * tCountSize, MPI_INT,
                global_results, recvcounts, displs, MPI_INT,
@@ -92,26 +88,33 @@ void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int *r
    free(displs);
 }
 
-void writeOutputFile(const char* filename, int tCount, int* results, Point* points, int N) {
-   FILE* file = fopen(filename, "w");
-   if (!file) {
+void writeOutputFile(const char *filename, int tCount, int *results, Point *points, int N)
+{
+   FILE *file = fopen(filename, "w");
+   if (!file)
+   {
       fprintf(stderr, "Failed to open output file.\n");
       MPI_Finalize();
       exit(1);
    }
 
-   for (int i = 0; i < tCount; i++) {
+   for (int i = 0; i < tCount; i++)
+   {
       int print = 1;
       for (int j = 0; j < CONSTRAINTS; j++)
       {
-         if (results[i * CONSTRAINTS + j] <= -1 || results[i * CONSTRAINTS + j] >= N) {
+         if (results[i * CONSTRAINTS + j] <= -1 || results[i * CONSTRAINTS + j] >= N)
+         {
             print = 0;
          }
       }
-      if (print) {
+      if (print)
+      {
          fprintf(file, "Points ");
-         for (int j = 0; j < CONSTRAINTS; j++) {
-            if (results[i * CONSTRAINTS + j] > -1 && results[i * CONSTRAINTS + j] < N) {
+         for (int j = 0; j < CONSTRAINTS; j++)
+         {
+            if (results[i * CONSTRAINTS + j] > -1 && results[i * CONSTRAINTS + j] < N)
+            {
                fprintf(file, "pointID%d, ", results[i * CONSTRAINTS + j]);
             }
          }
@@ -121,5 +124,3 @@ void writeOutputFile(const char* filename, int tCount, int* results, Point* poin
 
    fclose(file);
 }
-
-
