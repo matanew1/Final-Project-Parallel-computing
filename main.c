@@ -4,28 +4,11 @@
 #include <omp.h>
 #include <stdlib.h>
 #include "myProto.h"
+
 /*
-current t 0
-        p[0] = 0        p[1] = -1       p[2] = -1
-current t 1
-        p[0] = 0        p[1] = -1       p[2] = -1
-current t 2
-        p[0] = 0        p[1] = -1       p[2] = -1
-current t 3
-        p[0] = 0        p[1] = 1        p[2] = 3
-current t 4
-        p[0] = 0        p[1] = 1        p[2] = 3
-current t 5
-        p[0] = 0        p[1] = 1        p[2] = 2
-current t 6
-        p[0] = 0        p[1] = 1        p[2] = 2
-current t 7
-        p[0] = 0        p[1] = 1        p[2] = 2
-current t 8
-        p[0] = 0        p[1] = 1        p[2] = 2
-current t 9
-        p[0] = 0        p[1] = 1        p[2] = 2
+Failed to allocate device points (error code CUDA-capable device(s) is/are busy or unavailable)!
 */
+
 
 int main(int argc, char *argv[])
 {
@@ -43,6 +26,11 @@ int main(int argc, char *argv[])
         if (rank == 0)
         {
                 readInputFile(filename, &N, &K, &D, &tCount, &points);
+                if (tCount < size)
+                {
+                        printf("size must be lower than tCount !\n");
+                        MPI_Abort(MPI_COMM_WORLD, 1);
+                }
         }
 
         MPI_Bcast(&N, 1, MPI_INT, 0, MPI_COMM_WORLD);

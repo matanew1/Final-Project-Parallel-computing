@@ -1,21 +1,7 @@
 #include <cuda_runtime.h>
 #include <helper_cuda.h>
 #include "myProto.h"
-/*
-Failed to allocate device points (error code out of memory)!
 
-===================================================================================
-=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
-=   PID 46105 RUNNING AT ParallelC23-14
-=   EXIT CODE: 9
-=   CLEANING UP REMAINING PROCESSES
-=   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES
-===================================================================================
-YOUR APPLICATION TERMINATED WITH THE EXIT STRING: Killed (signal 9)
-This typically refers to a problem with your application.
-Please see the FAQ page for debugging suggestions
-make: *** [Makefile:12: run] Error 9
-*/
 __device__ double calcDistance(const Point *p1, const Point *p2, double *t)
 {
     double x1 = ((p1->x2 - p1->x1) / 2) * sin((*t) * M_PI / 2) + ((p1->x2 + p1->x1) / 2);
