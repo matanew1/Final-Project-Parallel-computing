@@ -79,7 +79,7 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
     Point *d_points = NULL;
     double *d_tValues = NULL;
     int *d_results = NULL;
-
+/*Failed to allocate device points (error code out of memory)!*/
     err = cudaMalloc((void **)&d_points, (*N) * sizeof(Point));
     if (err != cudaSuccess)
     {
