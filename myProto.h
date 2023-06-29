@@ -1,7 +1,9 @@
 #pragma once
 
 #define BLOCK_SIZE 256
-#define CONSTRAINTS 3   
+#define CONSTRAINTS 3  
+#define true 1
+#define false 0 
 
 # ifndef POINT_H
 # define POINT_H

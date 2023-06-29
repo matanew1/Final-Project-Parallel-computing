@@ -4,8 +4,28 @@
 #include <omp.h>
 #include <stdlib.h>
 #include "myProto.h"
-
-
+/*
+current t 0
+        p[0] = 0        p[1] = -1       p[2] = -1 
+current t 1
+        p[0] = 0        p[1] = -1       p[2] = -1 
+current t 2
+        p[0] = 0        p[1] = -1       p[2] = -1 
+current t 3
+        p[0] = 0        p[1] = 1        p[2] = 3 
+current t 4
+        p[0] = 0        p[1] = 1        p[2] = 3 
+current t 5
+        p[0] = 0        p[1] = 1        p[2] = 2 
+current t 6
+        p[0] = 0        p[1] = 1        p[2] = 2 
+current t 7
+        p[0] = 0        p[1] = 1        p[2] = 2 
+current t 8
+        p[0] = 0        p[1] = 1        p[2] = 2 
+current t 9
+        p[0] = 0        p[1] = 1        p[2] = 2 
+*/
 
 int main(int argc, char *argv[])
 {
@@ -71,8 +91,8 @@ int main(int argc, char *argv[])
    int globalCount = 0;
 
    // Allocate and initialize the results array
-   int* results = (int*)malloc(CONSTRAINTS * tCountSize * sizeof(int));
-   memset(results, -1, CONSTRAINTS * tCountSize * sizeof(int));
+   int *results = (int *)malloc(CONSTRAINTS * myTValuesSize * sizeof(int));
+   memset(results, -1, CONSTRAINTS * myTValuesSize * sizeof(int));
 
    // Compute results on GPU
    computeOnGPU(&N, &K, &D, &myTValuesSize, myTValues, points, results);
@@ -83,16 +103,25 @@ int main(int argc, char *argv[])
       global_results = (int *)malloc(CONSTRAINTS * tCount * sizeof(int));
       for (int i = 0; i < CONSTRAINTS * tCount; i++)
       {
-         global_results[i] = -1;         
+         global_results[i] = -1;
       }
    }
-   
+
    gatherResults(rank, size, N, tCount, myTValuesSize, results, global_results);
 
    if (rank == 0)
    {
       writeOutputFile("output.txt", tCount, global_results, points, N);
-
+      // for (int i = 0; i < tCount; i++)
+      // {
+      //    printf("current t %d\n", i);
+      //    for (int j = 0; j < CONSTRAINTS; j++)
+      //    {
+      //       printf("\tp[%d] = %d ", j, global_results[i * CONSTRAINTS + j]);
+      //    }
+      //    printf("\n");
+      // }
+      // printf("\n");
    }
 
    // Deallocate memory

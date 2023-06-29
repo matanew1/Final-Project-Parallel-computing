@@ -1,0 +1,16 @@
+
+mpiCudaOpemMP:64247 terminated with signal 6 at PC=7f2564696a7c SP=7fffed94ec90.  Backtrace:
+/lib/x86_64-linux-gnu/libc.so.6(pthread_kill+0x12c)[0x7f2564696a7c]
+/lib/x86_64-linux-gnu/libc.so.6(raise+0x16)[0x7f2564642476]
+/lib/x86_64-linux-gnu/libc.so.6(abort+0xd3)[0x7f25646287f3]
+/lib/x86_64-linux-gnu/libc.so.6(+0x896f6)[0x7f25646896f6]
+/lib/x86_64-linux-gnu/libc.so.6(+0xa0d7c)[0x7f25646a0d7c]
+/lib/x86_64-linux-gnu/libc.so.6(+0xa2ef0)[0x7f25646a2ef0]
+/lib/x86_64-linux-gnu/libc.so.6(free+0x73)[0x7f25646a54d3]
+/lib/x86_64-linux-gnu/libfabric.so.1(+0x188b1)[0x7f25670c38b1]
+/lib64/ld-linux-x86-64.so.2(+0x624e)[0x7f256758024e]
+/lib/x86_64-linux-gnu/libc.so.6(+0x45495)[0x7f2564645495]
+/lib/x86_64-linux-gnu/libc.so.6(on_exit+0x0)[0x7f2564645610]
+/lib/x86_64-linux-gnu/libc.so.6(+0x29d97)[0x7f2564629d97]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x80)[0x7f2564629e40]
+./mpiCudaOpemMP(+0x2565)[0x5619d0da7565]

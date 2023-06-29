@@ -62,22 +62,32 @@ void calculateTValues(int tCount, double **tValues)
 
 void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int *results, int *global_results)
 {
-   int *recvcounts = (int *)malloc(size * sizeof(int));
-   int *displs = (int *)malloc(size * sizeof(int));
+   int *recvcounts = (int *)calloc(size, sizeof(int));
+   int *displs = (int *)calloc(size, sizeof(int));
 
    // Calculate the recvcounts and displacements for the 2D array
-   for (int i = 0; i < size; i++)
-   {
-      recvcounts[i] = CONSTRAINTS * tCountSize;
-      displs[i] = 0;
-   }
+   // for (int i = 0; i < size; i++)
+   // {
+   //    recvcounts[i] = CONSTRAINTS * tCountSize;
+   //    displs[i] = 0;
+   // }
 
    // Adjust the displacements for the 2D array
    for (int i = 1; i < size; i++)
    {
-      displs[i] = displs[i - 1] + recvcounts[i - 1];
+      // start
    }
 
+       
+    for (int i = 0; i < tCountSize; i++)
+    {
+        for (int j = 0; j < CONSTRAINTS; j++)
+        {
+            printf("%d ",results[i * CONSTRAINTS + j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
    // Gather the 2D array results from all processes into global_results on rank 0
    MPI_Gatherv(results, CONSTRAINTS * tCountSize, MPI_INT,
                global_results, recvcounts, displs, MPI_INT,

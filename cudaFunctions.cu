@@ -25,12 +25,12 @@ __device__ void updateResults(int idx, int *results, int proximityPointId)
 {
     for (int j = 0; j < CONSTRAINTS; j++)
     {   
-        int last = results[idx * CONSTRAINTS + j];
-        int currentValue = atomicCAS(&results[idx * CONSTRAINTS + j], -1, proximityPointId);
-        if (currentValue == -1)
-        {
-            // printf("t = %d || From %d to %d at %d\n",idx, last, currentValue , idx * CONSTRAINTS + j);
-            break;
+        int targetIndex = idx * CONSTRAINTS + j;
+        int last = results[targetIndex];
+        if(results[targetIndex] == -1) {
+            atomicExch(&results[targetIndex], proximityPointId);
+            // printf("t = %d || From %d to %d at %d\n",idx,last, results[targetIndex], targetIndex);
+            return;
         }
     }
 }
@@ -44,12 +44,13 @@ __global__ void checkProximityCriteria(Point *points, double *tValues, const int
 
     double t = tValues[idx];
     int count = 0;
+    int finish = false;
 
     for (int i = 0; i < N; i++)
     {
         count = 0;
-
-        for (int j = 0; j < N; j++)
+        // finish = false;
+        for (int j = 0; j < N && !finish; j++)
         {
             if (i != j && isProximityCriteriaMet(&points[i], &points[j], &t, D))
             {
@@ -57,14 +58,14 @@ __global__ void checkProximityCriteria(Point *points, double *tValues, const int
                 if (count == K)
                 {
                     int proximityPointId = points[i].id;
-                    printf("[%d]\n",proximityPointId);
+                    // printf("[t = %d || [%d]\n",idx,proximityPointId);
                     updateResults(idx, results, proximityPointId);
+                    // finish = true;
                     break;
                 }
             }
         }
     }
-    __syncthreads();
 }
 
 void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues, Point *points, int *results)
@@ -133,16 +134,6 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
         exit(EXIT_FAILURE);
     }
 
-    for (int i = 0; i < *tCountSize; i++)
-    {
-        printf("current t %d\n", i);
-        for (int j = 0; j < CONSTRAINTS; j++)
-        {
-            printf("\tp[%d] = %d ", j, results[i * CONSTRAINTS + j]);
-        }
-        printf("\n");
-    }
-    printf("\n");
     cudaFree(d_points);
     cudaFree(d_tValues);
     cudaFree(d_results);
