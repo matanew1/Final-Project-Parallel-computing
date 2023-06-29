@@ -29,7 +29,7 @@ __device__ void updateResults(int idx, int *results, int proximityPointId)
         int currentValue = atomicCAS(&results[idx * CONSTRAINTS + j], -1, proximityPointId);
         if (currentValue == -1)
         {
-            printf("t = %d || From %d to %d at %d\n",idx, last, currentValue , idx * CONSTRAINTS + j);
+            // printf("t = %d || From %d to %d at %d\n",idx, last, currentValue , idx * CONSTRAINTS + j);
             break;
         }
     }
@@ -57,6 +57,7 @@ __global__ void checkProximityCriteria(Point *points, double *tValues, const int
                 if (count == K)
                 {
                     int proximityPointId = points[i].id;
+                    printf("[%d]\n",proximityPointId);
                     updateResults(idx, results, proximityPointId);
                     break;
                 }
@@ -64,16 +65,6 @@ __global__ void checkProximityCriteria(Point *points, double *tValues, const int
         }
     }
     __syncthreads();
-
-    // for (int i = 0; i < tCount; i++)
-    // {
-    //     printf("current t %d\n", i);
-    //     for (int j = 0; j < CONSTRAINTS; j++)
-    //     {
-    //         printf("\tp[%d] = %d ", j, results[i * CONSTRAINTS + j]);
-    //     }
-    //     printf("\n");
-    // }
 }
 
 void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues, Point *points, int *results)
@@ -142,15 +133,15 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
         exit(EXIT_FAILURE);
     }
 
-    // for (int i = 0; i < *tCountSize; i++)
-    // {
-    //     printf("current t %d\n", i);
-    //     for (int j = 0; j < CONSTRAINTS; j++)
-    //     {
-    //         printf("\tp[%d] = %d ", j, results[i * CONSTRAINTS + j]);
-    //     }
-    //     printf("\n");
-    // }
+    for (int i = 0; i < *tCountSize; i++)
+    {
+        printf("current t %d\n", i);
+        for (int j = 0; j < CONSTRAINTS; j++)
+        {
+            printf("\tp[%d] = %d ", j, results[i * CONSTRAINTS + j]);
+        }
+        printf("\n");
+    }
     printf("\n");
     cudaFree(d_points);
     cudaFree(d_tValues);
