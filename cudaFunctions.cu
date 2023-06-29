@@ -26,11 +26,9 @@ __device__ void updateResults(int idx, int *results, int proximityPointId)
     for (int j = 0; j < CONSTRAINTS; j++)
     {
         int targetIndex = idx * CONSTRAINTS + j;
-        // int last = results[targetIndex];
         if (results[targetIndex] == -1)
         {
             atomicExch(&results[targetIndex], proximityPointId);
-            // printf("t = %d || From %d to %d at %d\n",idx,last, results[targetIndex], targetIndex);
             return;
         }
     }
@@ -50,8 +48,7 @@ __global__ void checkProximityCriteria(Point *points, double *tValues, const int
     for (int i = 0; i < N; i++)
     {
         count = 0;
-        // finish = false;
-        for (int j = 0; j < N && !finish; j++)
+        for (int j = 0; j < N j++)
         {
             if (i != j && isProximityCriteriaMet(&points[i], &points[j], &t, D))
             {
@@ -59,9 +56,7 @@ __global__ void checkProximityCriteria(Point *points, double *tValues, const int
                 if (count == K)
                 {
                     int proximityPointId = points[i].id;
-                    // printf("[t = %d || [%d]\n",idx,proximityPointId);
                     updateResults(idx, results, proximityPointId);
-                    // finish = true;
                     break;
                 }
             }
@@ -75,8 +70,6 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
     cudaError_t err = cudaSuccess;
     int threadPerBlock = min(BLOCK_SIZE, *tCountSize);
     int blocksPerGrid = (*tCountSize + threadPerBlock - 1) / threadPerBlock;
-
-    // printf("*tCountSize = %d threadPerBlock=%d blocksPerGrid=%d\n", *tCountSize,threadPerBlock,blocksPerGrid);
 
     Point *d_points = NULL;
     double *d_tValues = NULL;
