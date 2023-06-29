@@ -26,7 +26,7 @@ __device__ void updateResults(int idx, int *results, int proximityPointId)
     for (int j = 0; j < CONSTRAINTS; j++)
     {
         int targetIndex = idx * CONSTRAINTS + j;
-        int last = results[targetIndex];
+        // int last = results[targetIndex];
         if (results[targetIndex] == -1)
         {
             atomicExch(&results[targetIndex], proximityPointId);
