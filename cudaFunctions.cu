@@ -1,7 +1,21 @@
 #include <cuda_runtime.h>
 #include <helper_cuda.h>
 #include "myProto.h"
+/*
+Failed to allocate device points (error code out of memory)!
 
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   PID 46105 RUNNING AT ParallelC23-14
+=   EXIT CODE: 9
+=   CLEANING UP REMAINING PROCESSES
+=   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES
+===================================================================================
+YOUR APPLICATION TERMINATED WITH THE EXIT STRING: Killed (signal 9)
+This typically refers to a problem with your application.
+Please see the FAQ page for debugging suggestions
+make: *** [Makefile:12: run] Error 9
+*/
 __device__ double calcDistance(const Point *p1, const Point *p2, double *t)
 {
     double x1 = ((p1->x2 - p1->x1) / 2) * sin((*t) * M_PI / 2) + ((p1->x2 + p1->x1) / 2);
@@ -75,27 +89,6 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
     cudaError_t err = cudaSuccess;
     int threadPerBlock = min(BLOCK_SIZE, *tCountSize);
     int blocksPerGrid = (*tCountSize + threadPerBlock - 1) / threadPerBlock;
-
-    size_t freeMem, totalMem;
-    err = cudaMemGetInfo(&freeMem, &totalMem);
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "cudaMemGetInfo failed: %s\n", cudaGetErrorString(err));
-        return;
-    }
-    /*
-    Free GPU memory: 265285632 bytes
-Total GPU memory: 2147483648 bytes
-Free GPU memory: 263188480 bytes
-Total GPU memory: 2147483648 bytes
-Free GPU memory: 179302400 bytes
-Total GPU memory: 2147483648 bytes
-cudaMemGetInfo failed: out of memory
-rm -f *.o ./mpiCudaOpemMP
-    */
-
-    printf("Free GPU memory: %lu bytes\n", freeMem);
-    printf("Total GPU memory: %lu bytes\n", totalMem);
 
     // printf("*tCountSize = %d threadPerBlock=%d blocksPerGrid=%d\n", *tCountSize,threadPerBlock,blocksPerGrid);
 
