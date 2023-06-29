@@ -66,18 +66,13 @@ void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int *r
    int *displs = (int *)calloc(size, sizeof(int));
 
    // Calculate the recvcounts and displacements for the 2D array
-   // for (int i = 0; i < size; i++)
-   // {
-   //    recvcounts[i] = CONSTRAINTS * tCountSize;
-   //    displs[i] = 0;
-   // }
-
-   // Adjust the displacements for the 2D array
-   for (int i = 1; i < size; i++)
+   for (int i = 0; i < size; i++)
    {
-      // start
+      recvcounts[i] = CONSTRAINTS * tCountSize;
+      displs[i] = 0;
    }
 
+   if (rank > 0) displs[rank] = displs[rank - 1] + recvcounts[rank];
        
     for (int i = 0; i < tCountSize; i++)
     {
