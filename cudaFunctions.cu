@@ -24,10 +24,11 @@ __device__ bool isProximityCriteriaMet(const Point *p1, const Point *p2, double 
 __device__ void updateResults(int idx, int *results, int proximityPointId)
 {
     for (int j = 0; j < CONSTRAINTS; j++)
-    {   
+    {
         int targetIndex = idx * CONSTRAINTS + j;
         int last = results[targetIndex];
-        if(results[targetIndex] == -1) {
+        if (results[targetIndex] == -1)
+        {
             atomicExch(&results[targetIndex], proximityPointId);
             // printf("t = %d || From %d to %d at %d\n",idx,last, results[targetIndex], targetIndex);
             return;
@@ -35,12 +36,12 @@ __device__ void updateResults(int idx, int *results, int proximityPointId)
     }
 }
 
-
 __global__ void checkProximityCriteria(Point *points, double *tValues, const int tCount, const int N, const int K, const double D, int *results)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x; // point idx
 
-    if (idx >= tCount) return; // specific t
+    if (idx >= tCount)
+        return; // specific t
 
     double t = tValues[idx];
     int count = 0;
@@ -70,7 +71,7 @@ __global__ void checkProximityCriteria(Point *points, double *tValues, const int
 
 void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues, Point *points, int *results)
 {
-    
+
     cudaError_t err = cudaSuccess;
     int threadPerBlock = min(BLOCK_SIZE, *tCountSize);
     int blocksPerGrid = (*tCountSize + threadPerBlock - 1) / threadPerBlock;
@@ -82,11 +83,21 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
         fprintf(stderr, "cudaMemGetInfo failed: %s\n", cudaGetErrorString(err));
         return;
     }
+    /*
+    Free GPU memory: 265285632 bytes
+Total GPU memory: 2147483648 bytes
+Free GPU memory: 263188480 bytes
+Total GPU memory: 2147483648 bytes
+Free GPU memory: 179302400 bytes
+Total GPU memory: 2147483648 bytes
+cudaMemGetInfo failed: out of memory
+rm -f *.o ./mpiCudaOpemMP
+    */
 
     printf("Free GPU memory: %lu bytes\n", freeMem);
     printf("Total GPU memory: %lu bytes\n", totalMem);
 
-    // printf("*tCountSize = %d threadPerBlock=%d blocksPerGrid=%d\n", *tCountSize,threadPerBlock,blocksPerGrid);                      
+    // printf("*tCountSize = %d threadPerBlock=%d blocksPerGrid=%d\n", *tCountSize,threadPerBlock,blocksPerGrid);
 
     Point *d_points = NULL;
     double *d_tValues = NULL;
