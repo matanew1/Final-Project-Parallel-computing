@@ -63,9 +63,43 @@ __global__ void checkProximityCriteria(Point *points, double *tValues, const int
     }
 }
 
+void allocateDeviceMemory(void **devPtr, size_t size)
+{
+    cudaError_t err = cudaMalloc(devPtr, size);
+    if (err != cudaSuccess)
+    {
+        fprintf(stderr, "Failed to allocate device memory (error code %s)!\n", cudaGetErrorString(err));
+        exit(EXIT_FAILURE);
+    }
+}
+
+void copyHostToDevice(void *dst, const void *src, size_t count, cudaMemcpyKind kind)
+{
+    cudaError_t err = cudaMemcpy(dst, src, count, kind);
+    if (err != cudaSuccess)
+    {
+        fprintf(stderr, "Failed to copy data from host to device (error code %s)!\n", cudaGetErrorString(err));
+        exit(EXIT_FAILURE);
+    }
+}
+
+void copyDeviceToHost(void *dst, const void *src, size_t count, cudaMemcpyKind kind)
+{
+    cudaError_t err = cudaMemcpy(dst, src, count, kind);
+    if (err != cudaSuccess)
+    {
+        fprintf(stderr, "Failed to copy data from device to host (error code %s)!\n", cudaGetErrorString(err));
+        exit(EXIT_FAILURE);
+    }
+}
+
+void freeDeviceMemory(void *devPtr)
+{
+    cudaFree(devPtr);
+}
+
 void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues, Point *points, int *results)
 {
-
     cudaError_t err = cudaSuccess;
     int threadPerBlock = min(BLOCK_SIZE, *tCountSize);
     int blocksPerGrid = (*tCountSize + threadPerBlock - 1) / threadPerBlock;
@@ -74,43 +108,13 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
     double *d_tValues = NULL;
     int *d_results = NULL;
 
-    err = cudaMalloc((void **)&d_points, (*N) * sizeof(Point));
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to allocate device points (error code %s)!\n", cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
-    err = cudaMalloc((void **)&d_tValues, (*tCountSize) * sizeof(double));
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to allocate device tValues (error code %s)!\n", cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
-    err = cudaMalloc((void **)&d_results, CONSTRAINTS * (*tCountSize) * sizeof(int));
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to allocate device results (error code %s)!\n", cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
+    allocateDeviceMemory((void **)&d_points, (*N) * sizeof(Point));
+    allocateDeviceMemory((void **)&d_tValues, (*tCountSize) * sizeof(double));
+    allocateDeviceMemory((void **)&d_results, CONSTRAINTS * (*tCountSize) * sizeof(int));
 
-    err = cudaMemcpy(d_points, points, (*N) * sizeof(Point), cudaMemcpyHostToDevice);
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to copy points from host to device (error code %s)!\n", cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
-    err = cudaMemcpy(d_tValues, myTValues, (*tCountSize) * sizeof(double), cudaMemcpyHostToDevice);
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to copy tValues from host to device (error code %s)!\n", cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
-    err = cudaMemcpy(d_results, results, CONSTRAINTS * (*tCountSize) * sizeof(int), cudaMemcpyHostToDevice);
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to copy results from host to device (error code %s)!\n", cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
+    copyHostToDevice(d_points, points, (*N) * sizeof(Point), cudaMemcpyHostToDevice);
+    copyHostToDevice(d_tValues, myTValues, (*tCountSize) * sizeof(double), cudaMemcpyHostToDevice);
+    copyHostToDevice(d_results, results, CONSTRAINTS * (*tCountSize) * sizeof(int), cudaMemcpyHostToDevice);
 
     checkProximityCriteria<<<blocksPerGrid, threadPerBlock>>>(d_points, d_tValues, *tCountSize, *N, *K, *D, d_results);
     cudaDeviceSynchronize();
@@ -121,14 +125,9 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
         exit(EXIT_FAILURE);
     }
 
-    err = cudaMemcpy(results, d_results, CONSTRAINTS * (*tCountSize) * sizeof(int), cudaMemcpyDeviceToHost);
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to copy results from device to host (error code %s)!\n", cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
+    copyDeviceToHost(results, d_results, CONSTRAINTS * (*tCountSize) * sizeof(int), cudaMemcpyDeviceToHost);
 
-    cudaFree(d_points);
-    cudaFree(d_tValues);
-    cudaFree(d_results);
+    freeDeviceMemory(d_points);
+    freeDeviceMemory(d_tValues);
+    freeDeviceMemory(d_results);
 }
