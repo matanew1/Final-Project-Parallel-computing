@@ -1,4 +1,4 @@
-NUM_PROC = 8
+NUM_PROC = 12
 build:
 	mpicxx -fopenmp -c main.c -o main.o
 	mpicxx -fopenmp -c cFunctions.c -o cFunctions.o
