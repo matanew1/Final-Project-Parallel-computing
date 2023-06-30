@@ -1,3 +1,4 @@
+NUM_PROC = 8
 build:
 	mpicxx -fopenmp -c main.c -o main.o
 	mpicxx -fopenmp -c cFunctions.c -o cFunctions.o
@@ -9,7 +10,7 @@ clean:
 	rm -f *.o ./mpiCudaOpemMP
 
 run:
-	mpiexec -np 4 ./mpiCudaOpemMP
+	mpiexec -np ${NUM_PROC} ./mpiCudaOpemMP
 
 runOn2:
-	mpiexec -np 4 -machinefile  mf  -map-by  node  ./mpiCudaOpemMP
+	mpiexec -np ${NUM_PROC} -machinefile  mf  -map-by  node  ./mpiCudaOpemMP
