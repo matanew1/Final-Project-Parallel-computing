@@ -1,3 +1,12 @@
-Points pointID0, pointID1, pointID1 satisfy Proximity Criteria at t = -0.20
-Points pointID0, pointID1, pointID0 satisfy Proximity Criteria at t = 0.00
-Points pointID2, pointID4, pointID3 satisfy Proximity Criteria at t = 0.20
+Points pointID0, pointID1, pointID3 satisfy Proximity Criteria at t = -0.06
+Points pointID0, pointID1, pointID3 satisfy Proximity Criteria at t = -0.04
+Points pointID0, pointID1, pointID3 satisfy Proximity Criteria at t = -0.02
+Points pointID0, pointID1, pointID3 satisfy Proximity Criteria at t = 0.00
+Points pointID0, pointID1, pointID3 satisfy Proximity Criteria at t = 0.02
+Points pointID0, pointID1, pointID3 satisfy Proximity Criteria at t = 0.04
+Points pointID2, pointID3, pointID4 satisfy Proximity Criteria at t = 0.24
+Points pointID2, pointID3, pointID4 satisfy Proximity Criteria at t = 0.26
+Points pointID2, pointID3, pointID4 satisfy Proximity Criteria at t = 0.28
+Points pointID2, pointID3, pointID4 satisfy Proximity Criteria at t = 0.30
+Points pointID2, pointID3, pointID4 satisfy Proximity Criteria at t = 0.32
+Points pointID2, pointID3, pointID4 satisfy Proximity Criteria at t = 0.34

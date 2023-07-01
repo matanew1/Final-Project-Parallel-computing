@@ -174,7 +174,7 @@ int main()
 
    checkProximityCriteria(points, N, tValues, tCount, D, results);
 
-   writeOutputFile("output.txt", tCount, results, points, N);
+   writeOutputFile("output_test.txt", tCount, results, points, N);
 
    freeMemory(points, tValues, results);
 
