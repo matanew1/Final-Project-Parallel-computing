@@ -8,6 +8,7 @@ build:
 	
 
 clean:
+	rm -f test
 	rm -f *.o ./mpiCudaOpemMP
 
 run:
