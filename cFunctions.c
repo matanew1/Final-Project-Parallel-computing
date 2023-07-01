@@ -3,11 +3,6 @@
 #include <stdlib.h>
 #include <mpi.h>
 
-void test(int *data, int n)
-{
-   printf("TEST");
-}
-
 void readInputFile(const char *filename, int *N, int *K, double *D, int *tCount, Point **points)
 {
    FILE *file = fopen(filename, "r");
@@ -51,11 +46,11 @@ void readInputFile(const char *filename, int *N, int *K, double *D, int *tCount,
 
 void calculateTValues(int tCount, double **tValues)
 {
-   *tValues = (double *)malloc(tCount * sizeof(double));
+   *tValues = (double *)malloc((tCount + 1) * sizeof(double));
 
    // calculate all t points
 #pragma omp parallel for
-   for (int i = 0; i < tCount; ++i)
+   for (int i = 0; i <= tCount; ++i)
    {
       (*tValues)[i] = (2.0 * i / tCount) - 1;
    }
@@ -98,28 +93,40 @@ void writeOutputFile(const char *filename, int tCount, int *results, Point *poin
       exit(1);
    }
 
+   int proximityFound = 0;
+
    for (int i = 0; i < tCount; i++)
    {
-      int print = 1;
+      int count = 0;
+      int pointIDs[3] = {-1, -1, -1};
+
       for (int j = 0; j < CONSTRAINTS; j++)
       {
-         if (results[i * CONSTRAINTS + j] <= -1 || results[i * CONSTRAINTS + j] >= N)
+         int pointID = results[i * CONSTRAINTS + j];
+         if (pointID >= 0 && pointID < N)
          {
-            print = 0;
+            pointIDs[count] = pointID;
+            count++;
          }
       }
-      if (print)
+
+      if (count == 3)
       {
+         proximityFound = 1;
          fprintf(file, "Points ");
-         for (int j = 0; j < CONSTRAINTS; j++)
+         for (int j = 0; j < 3; j++)
          {
-            if (results[i * CONSTRAINTS + j] > -1 && results[i * CONSTRAINTS + j] < N)
-            {
-               fprintf(file, "pointID%d, ", results[i * CONSTRAINTS + j]);
-            }
+            fprintf(file, "pointID%d", pointIDs[j]);
+            if (j < 2)
+               fprintf(file, ", ");
          }
-         fprintf(file, "satisfy Proximity Criteria at t%d\n", i);
+         fprintf(file, " satisfy Proximity Criteria at t = %.2f\n", 2.0 * i / tCount - 1);
       }
+   }
+
+   if (!proximityFound)
+   {
+      fprintf(file, "There were no 3 points found for any t.\n");
    }
 
    fclose(file);
