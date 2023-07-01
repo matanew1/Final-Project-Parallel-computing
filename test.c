@@ -44,20 +44,24 @@ void readInputFile(const char *filename, int *N, int *K, double *D, int *tCount,
 void calculateTValues(int tCount, double **tValues)
 {
    *tValues = (double *)malloc((tCount + 1) * sizeof(double));
+   if (!(*tValues))
+   {
+      fprintf(stderr, "Failed to allocate t values.\n");
+      exit(1);
+   }
 
-   // calculate all t points
    for (int i = 0; i <= tCount; ++i)
    {
       (*tValues)[i] = (2.0 * i / tCount) - 1;
    }
 }
 
-double calcDistance(const Point *p1, const Point *p2, double *t)
+double calcDistance(const Point *p1, const Point *p2, double t)
 {
-   double x1 = ((p1->x2 - p1->x1) / 2) * sin((*t) * M_PI / 2) + ((p1->x2 + p1->x1) / 2);
+   double x1 = ((p1->x2 - p1->x1) / 2) * sin(t * M_PI / 2) + ((p1->x2 + p1->x1) / 2);
    double y1 = p1->a * x1 + p1->b;
 
-   double x2 = ((p2->x2 - p2->x1) / 2) * sin((*t) * M_PI / 2) + ((p2->x2 + p2->x1) / 2);
+   double x2 = ((p2->x2 - p2->x1) / 2) * sin(t * M_PI / 2) + ((p2->x2 + p2->x1) / 2);
    double y2 = p2->a * x2 + p2->b;
 
    double distance = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
@@ -65,7 +69,7 @@ double calcDistance(const Point *p1, const Point *p2, double *t)
    return distance;
 }
 
-int isProximityCriteriaMet(const Point *p1, const Point *p2, double *t, double D)
+int isProximityCriteriaMet(const Point *p1, const Point *p2, double t, double D)
 {
    double distance = calcDistance(p1, p2, t);
    return distance <= D;
@@ -84,18 +88,25 @@ void updateResults(int idx, int *results, int proximityPointId)
    }
 }
 
-void checkProximityCriteria(Point *points, int N, double *tValues, int tCount, double D, int *results)
+void checkProximityCriteria(Point *points, int N, double *tValues, int tCount, double D, int *results, int K)
 {
+   int count = 0;
    for (int i = 0; i < tCount; i++)
    {
-      for (int j = 0; j < N - 1; j++)
+      for (int j = 0; j < N; j++)
       {
-         for (int k = j + 1; k < N; k++)
+         count = 0;
+         for (int k = 0; k < N; k++)
          {
-            if (isProximityCriteriaMet(&points[j], &points[k], &tValues[i], D))
+            if (j != k && isProximityCriteriaMet(&points[j], &points[k], tValues[i], D))
             {
-               updateResults(i, results, points[j].id);
-               updateResults(i, results, points[k].id);
+               count++;
+               if (count == K)
+               {
+                  int proximityPointId = points[j].id;
+                  updateResults(i, results, proximityPointId);
+                  break;
+               }
             }
          }
       }
@@ -170,9 +181,14 @@ int main()
 
    // Initialize results array
    results = (int *)malloc(tCount * CONSTRAINTS * sizeof(int));
+   if (!results)
+   {
+      fprintf(stderr, "Failed to allocate results array.\n");
+      exit(1);
+   }
    memset(results, -1, tCount * CONSTRAINTS * sizeof(int));
 
-   checkProximityCriteria(points, N, tValues, tCount, D, results);
+   checkProximityCriteria(points, N, tValues, tCount, D, results, K);
 
    writeOutputFile("output_test.txt", tCount, results, points, N);
 
