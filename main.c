@@ -9,10 +9,14 @@
  */
 int main(int argc, char *argv[])
 {
+    double startTime, endTime;
     int rank, size;
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    // start time
+    startTime = MPI_Wtime();
 
     const char *filename = "input.txt"; // Predefined filename
 
@@ -107,6 +111,12 @@ int main(int argc, char *argv[])
     if (rank == 0)
     {
         writeOutputFile("output.txt", tCount, global_results, points, N);
+        
+        // end time
+        endTime = MPI_Wtime();
+        double executionTime = endTime - startTime;
+
+        printf("Parallel - Execution time: %f seconds\n", executionTime);
     }
 
     // Deallocate memory

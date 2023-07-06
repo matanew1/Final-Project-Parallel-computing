@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 #include "myProto.h"
 
 /**
@@ -236,15 +237,32 @@ void freeMemory(Point *points, double *tValues, int *results)
 }
 
 /**
+ * Function to measure time
+ *
+ * @param start  Start time
+ * @param end    End time
+ * @return       Time duration in seconds
+ */
+double measureTime(clock_t start, clock_t end)
+{
+    return ((double)(end - start)) / CLOCKS_PER_SEC;
+}
+
+/**
  * Main function
  */
 int main()
 {
+   clock_t start, end;
+   double executionTime;
    int N, K, tCount;
    double D;
    Point *points;
    double *tValues;
    int *results;
+
+   //start time
+   start = clock();
 
    readInputFile("input.txt", &N, &K, &D, &tCount, &points); // Read input file and populate variables
    calculateTValues(tCount, &tValues); // Calculate t values
@@ -261,6 +279,12 @@ int main()
    checkProximityCriteria(points, N, tValues, tCount, D, results, K); // Check proximity criteria between points
 
    writeOutputFile("output_test.txt", tCount, results, points, N); // Write output file with points that satisfy the proximity criteria
+
+   // end time 
+   end = clock();
+
+   executionTime = measureTime(start, end);
+   printf("Sequential - Execution time: %f seconds\n", executionTime);
 
    freeMemory(points, tValues, results); // Free allocated memory
 
