@@ -31,15 +31,15 @@ int main(int argc, char *argv[])
         }
     }
 
-    MPI_Bcast(&N, 1, MPI_INT, 0, MPI_COMM_WORLD); // Broadcast N to all processes
-    MPI_Bcast(&K, 1, MPI_INT, 0, MPI_COMM_WORLD); // Broadcast K to all processes
-    MPI_Bcast(&D, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD); // Broadcast D to all processes
+    MPI_Bcast(&N, 1, MPI_INT, 0, MPI_COMM_WORLD);      // Broadcast N to all processes
+    MPI_Bcast(&K, 1, MPI_INT, 0, MPI_COMM_WORLD);      // Broadcast K to all processes
+    MPI_Bcast(&D, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);   // Broadcast D to all processes
     MPI_Bcast(&tCount, 1, MPI_INT, 0, MPI_COMM_WORLD); // Broadcast tCount to all processes
 
     // Define MPI_POINT datatype
     MPI_Datatype MPI_POINT;
     MPI_Type_contiguous(sizeof(Point), MPI_BYTE, &MPI_POINT); // Create custom datatype for Point struct
-    MPI_Type_commit(&MPI_POINT); // Commit the datatype
+    MPI_Type_commit(&MPI_POINT);                              // Commit the datatype
 
     // Allocate memory for points if not the root process
     if (rank != 0)
@@ -67,12 +67,12 @@ int main(int argc, char *argv[])
     int tCountSize = tCount / size;
     int remainingTValues = tCount % size;
     int *sendcounts = (int *)malloc(size * sizeof(int)); // Allocate memory for sendcounts
-    int *displs = (int *)malloc(size * sizeof(int)); // Allocate memory for displacements
+    int *displs = (int *)malloc(size * sizeof(int));     // Allocate memory for displacements
 
     // Calculate the sendcounts and displacements
     for (int i = 0; i < size; i++)
     {
-        sendcounts[i] = (i < remainingTValues) ? tCountSize + 1 : tCountSize; // Determine the sendcount for each process
+        sendcounts[i] = (i < remainingTValues) ? tCountSize + 1 : tCountSize;         // Determine the sendcount for each process
         displs[i] = i * tCountSize + ((i < remainingTValues) ? i : remainingTValues); // Determine the displacement for each process
     }
 
@@ -87,7 +87,10 @@ int main(int argc, char *argv[])
     memset(results, -1, CONSTRAINTS * myTValuesSize * sizeof(int)); // Initialize results array with -1 values
 
     // Compute results on GPU
-    computeOnGPU(&N, &K, &D, &myTValuesSize, myTValues, points, results);
+#pragma omp parallel // Add OpenMP parallel region
+    {
+        computeOnGPU(&N, &K, &D, &myTValuesSize, myTValues, points, results);
+    }
 
     int *global_results = NULL;
     if (rank == 0)
