@@ -1,112 +1,121 @@
 #include <mpi.h>
 #include <stdio.h>
 #include <string.h>
-#include <omp.h>
 #include <stdlib.h>
 #include "myProto.h"
 
+/**
+ * Main function
+ */
 int main(int argc, char *argv[])
 {
-        int rank, size;
-        MPI_Init(&argc, &argv);
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        MPI_Comm_size(MPI_COMM_WORLD, &size);
+    int rank, size;
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-        const char *filename = "input.txt"; // Predefined filename
+    const char *filename = "input.txt"; // Predefined filename
 
-        int N, K, tCount;
-        double D;
-        Point *points = NULL;
+    int N, K, tCount;
+    double D;
+    Point *points = NULL;
 
-        if (rank == 0)
+    // Read input file on root process and broadcast values to all processes
+    if (rank == 0)
+    {
+        readInputFile(filename, &N, &K, &D, &tCount, &points);
+        if (tCount < size)
         {
-                readInputFile(filename, &N, &K, &D, &tCount, &points);
-                if (tCount < size)
-                {
-                        printf("size must be lower than tCount !\n");
-                        MPI_Abort(MPI_COMM_WORLD, 1);
-                }
+            printf("tCount must be greater than or equal to size!\n");
+            MPI_Abort(MPI_COMM_WORLD, 1);
         }
+    }
 
-        MPI_Bcast(&N, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(&K, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(&D, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-        MPI_Bcast(&tCount, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&N, 1, MPI_INT, 0, MPI_COMM_WORLD); // Broadcast N to all processes
+    MPI_Bcast(&K, 1, MPI_INT, 0, MPI_COMM_WORLD); // Broadcast K to all processes
+    MPI_Bcast(&D, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD); // Broadcast D to all processes
+    MPI_Bcast(&tCount, 1, MPI_INT, 0, MPI_COMM_WORLD); // Broadcast tCount to all processes
 
-        // Define MPI_POINT constants
-        MPI_Datatype MPI_POINT;
-        MPI_Type_contiguous(sizeof(Point), MPI_BYTE, &MPI_POINT);
-        MPI_Type_commit(&MPI_POINT);
+    // Define MPI_POINT datatype
+    MPI_Datatype MPI_POINT;
+    MPI_Type_contiguous(sizeof(Point), MPI_BYTE, &MPI_POINT); // Create custom datatype for Point struct
+    MPI_Type_commit(&MPI_POINT); // Commit the datatype
 
-        if (rank != 0)
+    // Allocate memory for points if not the root process
+    if (rank != 0)
+    {
+        points = (Point *)malloc(N * sizeof(Point)); // Allocate memory for points
+        if (!points)
         {
-                points = (Point *)malloc(N * sizeof(Point));
-                if (!points)
-                {
-                        fprintf(stderr, "Failed to allocate points.\n");
-                        MPI_Finalize();
-                        exit(1);
-                }
+            fprintf(stderr, "Failed to allocate points.\n");
+            MPI_Finalize();
+            exit(1);
         }
+    }
 
-        MPI_Bcast(points, N, MPI_POINT, 0, MPI_COMM_WORLD);
+    // Broadcast points array from root to all processes
+    MPI_Bcast(points, N, MPI_POINT, 0, MPI_COMM_WORLD);
 
-        double *tValues = NULL;
+    double *tValues = NULL;
+    if (rank == 0)
+    {
+        // Calculate t values on the root process
         calculateTValues(tCount, &tValues);
+    }
 
-        int tCountSize = tCount / size;
-        int remainingTValues = tCount % size;
-        int *sendcounts = (int *)malloc(size * sizeof(int));
-        int *displs = (int *)malloc(size * sizeof(int));
+    // Calculate sendcounts and displacements for scatterv operation
+    int tCountSize = tCount / size;
+    int remainingTValues = tCount % size;
+    int *sendcounts = (int *)malloc(size * sizeof(int)); // Allocate memory for sendcounts
+    int *displs = (int *)malloc(size * sizeof(int)); // Allocate memory for displacements
 
-        // Calculate the sendcounts and displacements
-        for (int i = 0; i < size; i++)
-        {
-                sendcounts[i] = (i < remainingTValues) ? tCountSize + 1 : tCountSize;
-                displs[i] = i * tCountSize + ((i < remainingTValues) ? i : remainingTValues);
-        }
-        int myTValuesSize = sendcounts[rank];
-        double *myTValues = (double *)malloc(myTValuesSize * sizeof(double));
+    // Calculate the sendcounts and displacements
+    for (int i = 0; i < size; i++)
+    {
+        sendcounts[i] = (i < remainingTValues) ? tCountSize + 1 : tCountSize; // Determine the sendcount for each process
+        displs[i] = i * tCountSize + ((i < remainingTValues) ? i : remainingTValues); // Determine the displacement for each process
+    }
 
-        MPI_Scatterv(tValues, sendcounts, displs, MPI_DOUBLE, myTValues, myTValuesSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    int myTValuesSize = sendcounts[rank];
+    double *myTValues = (double *)malloc(myTValuesSize * sizeof(double)); // Allocate memory for t values of each process
 
-        int count = 0;
-        int globalCount = 0;
+    // Scatter t values to all processes
+    MPI_Scatterv(tValues, sendcounts, displs, MPI_DOUBLE, myTValues, myTValuesSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-        // Allocate and initialize the results array
-        int *results = (int *)malloc(CONSTRAINTS * myTValuesSize * sizeof(int));
-        memset(results, -1, CONSTRAINTS * myTValuesSize * sizeof(int));
+    // Allocate memory for results array
+    int *results = (int *)malloc(CONSTRAINTS * myTValuesSize * sizeof(int));
+    memset(results, -1, CONSTRAINTS * myTValuesSize * sizeof(int)); // Initialize results array with -1 values
 
-        // Compute results on GPU
-        computeOnGPU(&N, &K, &D, &myTValuesSize, myTValues, points, results);
+    // Compute results on GPU
+    computeOnGPU(&N, &K, &D, &myTValuesSize, myTValues, points, results);
 
-        int *global_results = NULL;
-        if (rank == 0)
-        {
-                global_results = (int *)malloc(CONSTRAINTS * tCount * sizeof(int));
-                for (int i = 0; i < CONSTRAINTS * tCount; i++)
-                {
-                        global_results[i] = -1;
-                }
-        }
+    int *global_results = NULL;
+    if (rank == 0)
+    {
+        // Allocate memory for global results on root process
+        global_results = (int *)malloc(CONSTRAINTS * tCount * sizeof(int));
+        memset(global_results, -1, CONSTRAINTS * tCount * sizeof(int)); // Initialize global results array with -1 values
+    }
 
-        gatherResults(rank, size, N, tCount, myTValuesSize, results, global_results);
+    // Gather results from all processes to root process
+    gatherResults(rank, size, N, tCount, myTValuesSize, results, global_results);
 
-        if (rank == 0)
-        {
-                writeOutputFile("output.txt", tCount, global_results, points, N);
-        }
+    // Write output file on root process
+    if (rank == 0)
+    {
+        writeOutputFile("output.txt", tCount, global_results, points, N);
+    }
 
-        // Deallocate memory
-        free(global_results);
-        free(points);
-        free(tValues);
-        MPI_Type_free(&MPI_POINT);
-        free(sendcounts);
-        free(displs);
-        free(myTValues);
-        free(results);
+    // Deallocate memory
+    free(global_results);
+    free(points);
+    free(tValues);
+    MPI_Type_free(&MPI_POINT);
+    free(sendcounts);
+    free(displs);
+    free(myTValues);
+    free(results);
 
-        MPI_Finalize();
-        return 0;
+    MPI_Finalize();
+    return 0;
 }
