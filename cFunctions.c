@@ -58,7 +58,6 @@ void readInputFile(const char *filename, int *N, int *K, double *D, int *tCount,
    fclose(file); // Close the input file
 }
 
-
 /**
  * Calculate t values based on the given tCount.
  *
@@ -112,7 +111,7 @@ void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int *r
                0, MPI_COMM_WORLD);
 
    free(recvcounts); // Free memory allocated for recvcounts array
-   free(displs);    // Free memory allocated for displs array
+   free(displs);     // Free memory allocated for displs array
 }
 
 /**
@@ -136,8 +135,6 @@ void writeOutputFile(const char *filename, int tCount, int *results, Point *poin
 
    int proximityFound = 0;
 
-   // Use OpenMP parallelism for the outer loop
-#pragma omp parallel for
    for (int i = 0; i < tCount; i++)
    {
       int count = 0;
@@ -157,18 +154,14 @@ void writeOutputFile(const char *filename, int tCount, int *results, Point *poin
       {
          proximityFound = 1;
 
-         // Use OpenMP critical section for file writing
-#pragma omp critical
+         fprintf(file, "Points ");
+         for (int j = 0; j < 3; j++)
          {
-            fprintf(file, "Points ");
-            for (int j = 0; j < 3; j++)
-            {
-               fprintf(file, "pointID%d", pointIDs[j]);
-               if (j < 2)
-                  fprintf(file, ", ");
-            }
-            fprintf(file, " satisfy Proximity Criteria at t = %.2f\n", 2.0 * i / tCount - 1);
+            fprintf(file, "pointID%d", pointIDs[j]);
+            if (j < 2)
+               fprintf(file, ", ");
          }
+         fprintf(file, " satisfy Proximity Criteria at t = %.2f\n", 2.0 * i / tCount - 1);
       }
    }
 
@@ -179,4 +172,3 @@ void writeOutputFile(const char *filename, int tCount, int *results, Point *poin
 
    fclose(file); // Close the output file
 }
-
