@@ -15,7 +15,8 @@
  */
 void readInputFile(const char *filename, int *N, int *K, double *D, int *tCount, Point **points)
 {
-   FILE *file = fopen(filename, "r"); // Open the input file in read mode
+   // Open the input file in read mode
+   FILE *file = fopen(filename, "r");
    if (!file)
    {
       fprintf(stderr, "Failed to open input file.\n");
@@ -23,6 +24,7 @@ void readInputFile(const char *filename, int *N, int *K, double *D, int *tCount,
       exit(1);
    }
 
+   // Read the required values from the input file
    if (fscanf(file, "%d %d %lf %d\n", N, K, D, tCount) != 4)
    {
       fprintf(stderr, "Failed to read required values from input file.\n");
@@ -31,7 +33,8 @@ void readInputFile(const char *filename, int *N, int *K, double *D, int *tCount,
       exit(1);
    }
 
-   *points = (Point *)malloc(*N * sizeof(Point)); // Allocate memory for points array
+   // Allocate memory for the points array
+   *points = (Point *)malloc(*N * sizeof(Point));
    if (!(*points))
    {
       fprintf(stderr, "Failed to allocate points.\n");
@@ -40,6 +43,7 @@ void readInputFile(const char *filename, int *N, int *K, double *D, int *tCount,
       exit(1);
    }
 
+   // Read point data from the input file and populate the points array
    for (int i = 0; i < *N; ++i)
    {
       if (fscanf(file, "%d %lf %lf %lf %lf\n", &((*points)[i].id), &((*points)[i].x1), &((*points)[i].x2), &((*points)[i].a), &((*points)[i].b)) != 5)
@@ -53,6 +57,7 @@ void readInputFile(const char *filename, int *N, int *K, double *D, int *tCount,
 
    fclose(file); // Close the input file
 }
+
 
 /**
  * Calculate t values based on the given tCount.
@@ -131,6 +136,8 @@ void writeOutputFile(const char *filename, int tCount, int *results, Point *poin
 
    int proximityFound = 0;
 
+   // Use OpenMP parallelism for the outer loop
+#pragma omp parallel for
    for (int i = 0; i < tCount; i++)
    {
       int count = 0;
@@ -149,14 +156,19 @@ void writeOutputFile(const char *filename, int tCount, int *results, Point *poin
       if (count == 3)
       {
          proximityFound = 1;
-         fprintf(file, "Points ");
-         for (int j = 0; j < 3; j++)
+
+         // Use OpenMP critical section for file writing
+#pragma omp critical
          {
-            fprintf(file, "pointID%d", pointIDs[j]);
-            if (j < 2)
-               fprintf(file, ", ");
+            fprintf(file, "Points ");
+            for (int j = 0; j < 3; j++)
+            {
+               fprintf(file, "pointID%d", pointIDs[j]);
+               if (j < 2)
+                  fprintf(file, ", ");
+            }
+            fprintf(file, " satisfy Proximity Criteria at t = %.2f\n", 2.0 * i / tCount - 1);
          }
-         fprintf(file, " satisfy Proximity Criteria at t = %.2f\n", 2.0 * i / tCount - 1);
       }
    }
 
@@ -167,3 +179,4 @@ void writeOutputFile(const char *filename, int tCount, int *results, Point *poin
 
    fclose(file); // Close the output file
 }
+
