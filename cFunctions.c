@@ -3,9 +3,19 @@
 #include <stdlib.h>
 #include <mpi.h>
 
+/**
+ * Read input file and populate the variables.
+ *
+ * @param filename  Input file name
+ * @param N         Pointer to the number of points
+ * @param K         Pointer to the number of points to satisfy proximity criteria
+ * @param D         Pointer to the proximity criteria threshold
+ * @param tCount    Pointer to the total number of t values
+ * @param points    Pointer to the array of points
+ */
 void readInputFile(const char *filename, int *N, int *K, double *D, int *tCount, Point **points)
 {
-   FILE *file = fopen(filename, "r");
+   FILE *file = fopen(filename, "r"); // Open the input file in read mode
    if (!file)
    {
       fprintf(stderr, "Failed to open input file.\n");
@@ -21,7 +31,7 @@ void readInputFile(const char *filename, int *N, int *K, double *D, int *tCount,
       exit(1);
    }
 
-   *points = (Point *)malloc(*N * sizeof(Point));
+   *points = (Point *)malloc(*N * sizeof(Point)); // Allocate memory for points array
    if (!(*points))
    {
       fprintf(stderr, "Failed to allocate points.\n");
@@ -41,21 +51,38 @@ void readInputFile(const char *filename, int *N, int *K, double *D, int *tCount,
       }
    }
 
-   fclose(file);
+   fclose(file); // Close the input file
 }
 
+/**
+ * Calculate t values based on the given tCount.
+ *
+ * @param tCount    Total number of t values
+ * @param tValues   Pointer to the t values array
+ */
 void calculateTValues(int tCount, double **tValues)
 {
-   *tValues = (double *)malloc((tCount + 1) * sizeof(double));
+   *tValues = (double *)malloc((tCount + 1) * sizeof(double)); // Allocate memory for t values array
 
    // calculate all t points
 #pragma omp parallel for
    for (int i = 0; i <= tCount; ++i)
    {
-      (*tValues)[i] = (2.0 * i / tCount) - 1;
+      (*tValues)[i] = (2.0 * i / tCount) - 1; // Calculate the t value for each index
    }
 }
 
+/**
+ * Gather results from all processes to the root process.
+ *
+ * @param rank           Rank of the current process
+ * @param size           Total number of processes
+ * @param N              Number of points
+ * @param tCount         Total number of t values
+ * @param tCountSize     Size of t values for the current process
+ * @param results        Results array of the current process
+ * @param global_results Global results array in the root process
+ */
 void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int *results, int *global_results)
 {
    int *recvcounts = (int *)malloc(size * sizeof(int));
@@ -79,13 +106,22 @@ void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int *r
                global_results, recvcounts, displs, MPI_INT,
                0, MPI_COMM_WORLD);
 
-   free(recvcounts);
-   free(displs);
+   free(recvcounts); // Free memory allocated for recvcounts array
+   free(displs);    // Free memory allocated for displs array
 }
 
+/**
+ * Write the output file with points that satisfy the proximity criteria.
+ *
+ * @param filename  Output file name
+ * @param tCount    Total number of t values
+ * @param results   Results array
+ * @param points    Array of points
+ * @param N         Number of points
+ */
 void writeOutputFile(const char *filename, int tCount, int *results, Point *points, int N)
 {
-   FILE *file = fopen(filename, "w");
+   FILE *file = fopen(filename, "w"); // Open the output file in write mode
    if (!file)
    {
       fprintf(stderr, "Failed to open output file.\n");
@@ -129,5 +165,5 @@ void writeOutputFile(const char *filename, int tCount, int *results, Point *poin
       fprintf(file, "There were no 3 points found for any t.\n");
    }
 
-   fclose(file);
+   fclose(file); // Close the output file
 }
