@@ -1,4 +1,4 @@
-NUM_PROC = 4
+NUM_PROC = 2
 build:
 	gcc ./test.c -o test -lm
 	mpicxx -fopenmp -c main.c -o main.o

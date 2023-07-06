@@ -267,6 +267,7 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
     // Copy results from the device to the host.
     copyDeviceToHost(results, d_results, CONSTRAINTS * (*tCountSize) * sizeof(int), cudaMemcpyDeviceToHost);
 
+
     // Free device memory for points, tValues, and results.
     freeDeviceMemory(d_points);
     freeDeviceMemory(d_tValues);

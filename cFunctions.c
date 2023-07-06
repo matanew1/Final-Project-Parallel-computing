@@ -123,7 +123,7 @@ void gatherResults(int rank, int size, int N, int tCount, int tCountSize, int *r
  * @param points    Array of points
  * @param N         Number of points
  */
-void writeOutputFile(const char *filename, int tCount, int *results, Point *points, int N)
+void writeOutputFile(const char *filename,double* tValues, int tCount, int *results, Point *points, int N)
 {
    FILE *file = fopen(filename, "w"); // Open the output file in write mode
    if (!file)
@@ -161,7 +161,7 @@ void writeOutputFile(const char *filename, int tCount, int *results, Point *poin
             if (j < 2)
                fprintf(file, ", ");
          }
-         fprintf(file, " satisfy Proximity Criteria at t = %.2f\n", 2.0 * i / tCount - 1);
+         fprintf(file, " satisfy Proximity Criteria at t[%d] = %.2f\n",i, tValues[i]);
       }
    }
 

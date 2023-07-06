@@ -91,10 +91,8 @@ int main(int argc, char *argv[])
     memset(results, -1, CONSTRAINTS * myTValuesSize * sizeof(int)); // Initialize results array with -1 values
 
     // Compute results on GPU
-#pragma omp parallel // Add OpenMP parallel region
-    {
-        computeOnGPU(&N, &K, &D, &myTValuesSize, myTValues, points, results);
-    }
+    computeOnGPU(&N, &K, &D, &myTValuesSize, myTValues, points, results);
+    
 
     int *global_results = NULL;
     if (rank == 0)
@@ -110,7 +108,7 @@ int main(int argc, char *argv[])
     // Write output file on root process
     if (rank == 0)
     {
-        writeOutputFile("output.txt", tCount, global_results, points, N);
+        writeOutputFile("output.txt", tValues, tCount, global_results, points, N);
         
         // end time
         endTime = MPI_Wtime();

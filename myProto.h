@@ -31,7 +31,7 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
  * @param results     Pointer to the results array
  */
 
-void writeOutputFile(const char* filename, int tCount, int* results, Point* points, int N);
+void writeOutputFile(const char* filename, double* tValues, int tCount, int* results, Point* points, int N);
 /**
  * Write the output file with points that satisfy the proximity criteria.
  *

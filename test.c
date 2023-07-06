@@ -174,7 +174,7 @@ void checkProximityCriteria(Point *points, int N, double *tValues, int tCount, d
  * @param points        Array of points
  * @param N             Number of points
  */
-void writeOutputFile(const char *filename, int tCount, int *results, Point *points, int N)
+void writeOutputFile(const char *filename,double* tValues,  int tCount, int *results, Point *points, int N)
 {
    FILE *file = fopen(filename, "w"); // Open the output file in write mode
    if (!file)
@@ -210,7 +210,7 @@ void writeOutputFile(const char *filename, int tCount, int *results, Point *poin
             if (j < 2)
                fprintf(file, ", ");
          }
-         fprintf(file, " satisfy Proximity Criteria at t = %.2f\n", 2.0 * i / tCount - 1); // Print the t value
+         fprintf(file, " satisfy Proximity Criteria at t[%d] = %.2f\n", i, tValues[i]); // Print the t value
       }
    }
 
@@ -278,7 +278,7 @@ int main()
 
    checkProximityCriteria(points, N, tValues, tCount, D, results, K); // Check proximity criteria between points
 
-   writeOutputFile("output_test.txt", tCount, results, points, N); // Write output file with points that satisfy the proximity criteria
+   writeOutputFile("output_test.txt",tValues, tCount, results, points, N); // Write output file with points that satisfy the proximity criteria
 
    // end time 
    end = clock();
