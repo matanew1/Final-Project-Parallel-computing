@@ -143,17 +143,22 @@ void writeOutputFile(const char *filename,double* tValues, int tCount, int *resu
       for (int j = 0; j < CONSTRAINTS; j++)
       {
          int pointID = results[i * CONSTRAINTS + j];
+         // if there is a point
          if (pointID >= 0 && pointID < N)
          {
+            //add the current point to the array 
+            // and count
             pointIDs[count] = pointID;
             count++;
          }
       }
 
+      // if the count equals to the constraint -> proximity found
       if (count == CONSTRAINTS)
       {
          proximityFound = 1;
 
+         // prints the points that has proximity criteria to the file output.txt 
          fprintf(file, "Points ");
          for (int j = 0; j < CONSTRAINTS; j++)
          {
