@@ -138,7 +138,7 @@ void writeOutputFile(const char *filename,double* tValues, int tCount, int *resu
    for (int i = 0; i < tCount; i++)
    {
       int count = 0;
-      int pointIDs[3] = {-1, -1, -1};
+      int pointIDs[CONSTRAINTS] = {-1, -1, -1};
 
       for (int j = 0; j < CONSTRAINTS; j++)
       {
@@ -150,12 +150,12 @@ void writeOutputFile(const char *filename,double* tValues, int tCount, int *resu
          }
       }
 
-      if (count == 3)
+      if (count == CONSTRAINTS)
       {
          proximityFound = 1;
 
          fprintf(file, "Points ");
-         for (int j = 0; j < 3; j++)
+         for (int j = 0; j < CONSTRAINTS; j++)
          {
             fprintf(file, "pointID%d", pointIDs[j]);
             if (j < 2)
