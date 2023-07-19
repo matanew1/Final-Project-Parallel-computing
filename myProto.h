@@ -3,8 +3,6 @@
 // Define constant values
 #define BLOCK_SIZE 256   // The block size used for GPU computations
 #define CONSTRAINTS 3    // The number of constraints to satisfy
-#define true 1           // Boolean true value
-#define false 0          // Boolean false value
 
 # ifndef POINT_H
 # define POINT_H
