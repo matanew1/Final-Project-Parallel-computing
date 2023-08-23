@@ -125,11 +125,14 @@ __global__ void checkProximityCriteria(Point *points, double *tValues, const int
                 // Check if the count of proximity points reaches the desired value K.
                 if (count == K)
                 {
+                    printf("Found proximity criteria point\n");
                     // Get the ID of the proximity point.
                     int proximityPointId = points[i].id;
 
+                    printf("Start update resutls\n");
                     // Update the results array with the proximity point ID.
                     updateResults(idx, results, proximityPointId);
+                    printf("End update resutls\n");
 
                     // Break out of the inner loop since K proximity points have been found.
                     break;
@@ -244,17 +247,16 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
     allocateDeviceMemory((void **)&d_points, (*N) * sizeof(Point));
     allocateDeviceMemory((void **)&d_tValues, (*tCountSize) * sizeof(double));
     allocateDeviceMemory((void **)&d_results, CONSTRAINTS * (*tCountSize) * sizeof(int));
+    printf("Allocated device memory for points, tValues, and results\n");
 
     // Copy points, tValues, and results from the host to the device.
     copyHostToDevice(d_points, points, (*N) * sizeof(Point), cudaMemcpyHostToDevice);
     copyHostToDevice(d_tValues, myTValues, (*tCountSize) * sizeof(double), cudaMemcpyHostToDevice);
     copyHostToDevice(d_results, results, CONSTRAINTS * (*tCountSize) * sizeof(int), cudaMemcpyHostToDevice);
+    printf("Copy host memory to device for points, tValues, and results\n");
 
     // Launch the checkProximityCriteria kernel on the device.
     checkProximityCriteria<<<blocksPerGrid, threadPerBlock>>>(d_points, d_tValues, *tCountSize, *N, *K, *D, d_results);
-
-    // Synchronize the device to ensure all kernel calls are completed.
-    cudaDeviceSynchronize();
 
     // Check if there was an error launching the kernel.
     err = cudaGetLastError();
@@ -263,6 +265,9 @@ void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues,
         fprintf(stderr, "Failed to launch checkProximityCriteria kernel (error code %s)!\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
+
+    // Synchronize the device to ensure all kernel calls are completed.
+    cudaDeviceSynchronize();
 
     // Copy results from the device to the host.
     copyDeviceToHost(results, d_results, CONSTRAINTS * (*tCountSize) * sizeof(int), cudaMemcpyDeviceToHost);
