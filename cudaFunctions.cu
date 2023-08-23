@@ -85,7 +85,7 @@ __global__ void checkProximity(Point *d_points, int N, double tValue, double D, 
 
             // Compare the ID of the current point and the checked point
             Point current = d_points[pid];
-            Point checked = d_results[i];
+            Point checked = d_points[i];
 
             if (checked.id != current.id && calcDistance(current, checked, tValue) < D)
             {
