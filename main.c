@@ -91,8 +91,7 @@ int main(int argc, char *argv[])
     memset(results, -1, CONSTRAINTS * myTValuesSize * sizeof(int)); // Initialize results array with -1 values
 
     // Compute results on GPU
-    computeOnGPU(&N, &K, &D, &myTValuesSize, myTValues, points, results);
-    
+    computeOnGPU(N, K, D, myTValuesSize, myTValues, points, results);  
 
     int *global_results = NULL;
     if (rank == 0)

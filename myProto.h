@@ -16,7 +16,7 @@ typedef struct Point {
 #endif
 
 // Function prototypes
-void computeOnGPU(int *N, int *K, double *D, int *tCountSize, double *myTValues, Point *points, int *results);
+int computeOnGPU(int N, int K, double D, int chunkSize, double *tValues, Point *allPoints, int *proximities);
 /**
  * Perform computations on GPU for proximity criteria checking.
  *
