@@ -10,13 +10,16 @@
  */
 __device__ double calcDistance(const Point p1, const Point p2, double t)
 {
-    double x1 = ((p1.x2 - p1.x1) / 2) * sin(t * M_PI / 2) + ((p1.x2 + p1.x1) / 2);
+    double x1 = ((p1.x2 - p1.x1) / 2) * __sinf(t * M_PI / 2) + ((p1.x2 + p1.x1) / 2);
     double y1 = p1.a * x1 + p1.b;
 
-    double x2 = ((p2.x2 - p2.x1) / 2) * sin(t * M_PI / 2) + (p2.x2 + p2.x1) / 2;
+    double x2 = ((p2.x2 - p2.x1) / 2) * __sinf(t * M_PI / 2) + (p2.x2 + p2.x1) / 2;
     double y2 = p2.a * x2 + p2.b;
 
-    return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+    double dx = x2 - x1;
+    double dy = y2 - y1;
+
+    return sqrt(dx * dx + dy * dy);
 }
 /**
  * @brief In this function points that have at least K points that the distance less then D will enter to the function
