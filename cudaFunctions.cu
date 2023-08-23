@@ -138,7 +138,6 @@ void copyMemory(void *dest, void *src, size_t size, cudaMemcpyKind direction)
     }
 }
 
-
 /**
  * Perform computation on the GPU.
  * @param N Number of points.
@@ -202,6 +201,6 @@ int computeOnGPU(int N, int K, double D, int tCount, double *tValues, Point *poi
         fprintf(stderr, "Failed to free device data - %s\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
-    
+
     return 0;
 }
