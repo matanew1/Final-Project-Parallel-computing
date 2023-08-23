@@ -31,15 +31,24 @@ __device__ double calcDistance(const Point p1, const Point p2, double t)
  */
 __device__ void updateResults(int tIdx, int *results, int pointId)
 {
+    // Loop through each constraint
     for (int i = 0; i < CONSTRAINTS; i++)
     {
+        // Calculate the index in the results array for the current tIdx and constraint
         int index = tIdx * CONSTRAINTS + i;
+
+        // Retrieve the current value stored at the calculated index
         int currentVal = results[index];
 
+        // Check if the current value is -1 (indicating an unset value)
         if (currentVal == -1)
         {
-            if (atomicCAS(&results[index], currentVal, pointId) == currentVal) 
+            // Attempt to atomically update the value at the calculated index
+            // If the current value is still -1, the swap is performed and returns true
+            if (atomicCAS(&results[index], currentVal, pointId) == currentVal)
             {
+                // If the swap was successful (i.e., the current value was still -1),
+                // exit the loop and the function
                 return;
             }
         }
@@ -54,36 +63,47 @@ __device__ void updateResults(int tIdx, int *results, int pointId)
  * @param D Max distance to check.
  * @param d_results Array of results.
  * @param K Need at least K points that fulfill the condition of Proximity Criteria.
- * @param tIndex The current t in the for loop.
+ * @param tIdx The current t in the for loop.
  */
-__global__ void checkProximity(Point *d_points, int N, double tValue, double D, int *d_results, double K, int tIndex)
+__global__ void checkProximity(Point *d_points, int N, double tValue, double D, int *d_results, double K, int tIdx)
 {
-    // current pid
+    // Calculate the unique thread ID within the grid
     int pid = blockDim.x * blockIdx.x + threadIdx.x;
 
+    // Initialize a counter to track the number of nearby points
     int counter = 0;
+
+    // Check if the thread ID is within the valid range of points
     if (pid < N)
     {
+        // Loop through all points to check proximity
         for (int i = 0; i < N; i++)
         {
+            // Check if the proximity results have been flagged as complete
+            if (atomicAdd(&d_results[tIdx * CONSTRAINTS + CONSTRAINTS - 1], 0) != -1)
+                return; // If the results are complete, exit the function immediately
 
-            if (atomicAdd(&d_results[tIndex * CONSTRAINTS + CONSTRAINTS - 1], 0) != -1)           
-                return;
-            
+            // Compare the ID of the current point and the checked point
+            Point current = d_points[pid];
+            Point checked = d_results[i];
 
-            if (d_points[i].id != d_points[pid].id && calcDistance(d_points[pid], d_points[i], tValue) < D)
+            if (checked.id != current.id && calcDistance(current, checked, tValue) < D)
             {
+                // Increment the counter when the condition is met
                 counter++;
+
+                // Check if the required number of nearby points have been found
                 if (counter == K)
                 {
-                    updateResults(tIndex, d_results, d_points[pid].id); 
+                    // Update the results array with the current point's ID
+                    updateResults(tIdx, d_results, current.id);
+                    // Exit the loop since the required condition has been satisfied
                     break;
                 }
             }
         }
     }
 }
-
 
 /**
  * Allocate memory on the GPU.
