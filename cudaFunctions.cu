@@ -3,10 +3,11 @@
 #include "myProto.h"
 
 /**
- * @brief this function will calc the distance between two points
- * @param p1 Struct that points on one point.
- * @param p2 Struct that points on the secound point.
- * @param t The current tvalue
+ * Calculate the distance between two points.
+ * @param p1 Struct that points to one point.
+ * @param p2 Struct that points to the second point.
+ * @param t The current t-value.
+ * @return The distance between the two points.
  */
 __device__ double calcDistance(const Point p1, const Point p2, double t)
 {
@@ -21,12 +22,12 @@ __device__ double calcDistance(const Point p1, const Point p2, double t)
 
     return sqrt(dx * dx + dy * dy);
 }
+
 /**
- * @brief In this function points that have at least K points that the distance less then D will enter to the function
- * and update the array of results.
- * @param startingIndex the current tvalue in the round
- * @param resutls array of results
- * @param pointId A point that satisfies the condition
+ * Update proximity points in an atomic manner.
+ * @param startingIndex The current t-value in the round.
+ * @param results Array of results.
+ * @param pointId A point that satisfies the condition.
  */
 __device__ void updateProximitePoints(int startingIndex, int *resutls, int pointId)
 {
@@ -46,67 +47,66 @@ __device__ void updateProximitePoints(int startingIndex, int *resutls, int point
         }
     }
 }
+
 /**
- * @brief this function will calcluate for each Tvalue[tIndex] Checks if it exists a Proximity Criteria.
- * Each thread will get point and check with other points if there is another point if the distance is smaller then D.
- * but before checking it, we will check the last poistion of d_resutls[tIndex * CONSTRAINTS + CONSTRAINTS - 1].
- * explanation: All CONSTRAINTS cells represent K points that Proximity Criteria. if there at Least K points fulfill the condition the points will
- * enter to the d_resutls.
- * Note: if one of the threads fill the last point in  d_resutls[tIndex * CONSTRAINTS + CONSTRAINTS - 1] the other threads will not continue
- * calclute the distance.
- * @param d_points array of all N points
- * @param N numbers of points
- * @param tValue current tValue
- * @param D max distance to check
- * @param d_resutls array of result
- * @param K need at least K points that fulfill the condition of Poximity Criteria
- * @param tIndex the current t in the for loop
-
-
-*/
-__global__ void calculateProximity(Point *d_points, int N, double tValue, double D, int *d_resutls, double K, int tIndex)
+ * Check proximity of points on the GPU.
+ * @param d_points Array of all N points.
+ * @param N Number of points.
+ * @param tValue Current t-value.
+ * @param D Max distance to check.
+ * @param d_results Array of results.
+ * @param K Need at least K points that fulfill the condition of Proximity Criteria.
+ * @param tIndex The current t in the for loop.
+ */
+__global__ void checkProximity(Point *d_points, int N, double tValue, double D, int *d_resutls, double K, int tIndex)
 {
     int pid = blockDim.x * blockIdx.x + threadIdx.x;
-    int counter = 0;
-    if (pid < N && atomicAdd(&d_resutls[tIndex * CONSTRAINTS + CONSTRAINTS - 1], 0) == -1)
+
+    if (pid >= N || d_resutls[tIndex * CONSTRAINTS + CONSTRAINTS - 1] != -1)
     {
-        for (int i = 0; i < N; i++)
+        return;
+    }
+
+    int counter = 0;
+    int currentPoint = d_points[pid];
+
+    for (int i = 0; i < N && counter < K; i++)
+    {
+        int checkedPoint = d_points[i];
+        if (checkedPoint.id != currentPoint.id && calcDistance(currentPoint, checkedPoint, tValue) < D)
         {
-
-            if (atomicAdd(&d_resutls[tIndex * CONSTRAINTS + CONSTRAINTS - 1], 0) != -1)
-            {
-                return;
-            }
-
-            if (d_points[i].id != d_points[pid].id && calcDistance(d_points[pid], d_points[i], tValue) < D)
-            {
-                counter++;
-                if (counter == K)
-                {
-
-                    int pointId = d_points[pid].id;                        /*This point is proximity*/
-                    updateProximitePoints(tIndex, d_resutls, pointId); /*0,resutls,point that have 3 points*/
-                    break;
-                }
-            }
+            counter++;
         }
+    }
+
+    if (counter == K)
+    {
+        updateProximitePoints(tIndex, d_resutls, currentPoint.id);
     }
 }
 
+
+/**
+ * Allocate memory on the GPU.
+ * @param ptr Pointer to the memory to be allocated.
+ * @param size Size of the memory to allocate (in bytes).
+ */
 void allocateMemDevice(void **ptr, size_t size)
 {
-    cudaError_t err = cudaMalloc(ptr, size); /*Allocate mem on device*/
+    cudaError_t err = cudaMalloc(ptr, size); 
     if (err != cudaSuccess)
     {
         fprintf(stderr, "Cannot to allocate memory on device. -%s\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
 }
+
 /**
- * @param dest Pointer to the dest in device / host memory
- * @param src  Pointer to the src in host / device memory
- * @param size How much data need to copy(Bytes)
- * @param direction Which direction to copy the mem(host-> device) | (device -> host)
+ * Copy memory between host and device.
+ * @param dest Pointer to the destination in device/host memory.
+ * @param src Pointer to the source in host/device memory.
+ * @param size How much data needs to be copied (in bytes).
+ * @param direction Which direction to copy the memory (host->device) or (device->host).
  */
 void copyMemory(void *dest, void *src, size_t size, cudaMemcpyKind direction)
 {
@@ -118,17 +118,30 @@ void copyMemory(void *dest, void *src, size_t size, cudaMemcpyKind direction)
         exit(EXIT_FAILURE);
     }
 }
-// 0528626957 boris
+
+
+/**
+ * Perform computation on the GPU.
+ * @param N Number of points.
+ * @param K Need at least K points that fulfill the condition of Proximity Criteria.
+ * @param D Max distance to check.
+ * @param tCount Number of t values.
+ * @param tValues Array of t values.
+ * @param points Array of points.
+ * @param results Array of results.
+ * @return 0 if the computation is successful.
+ */
 int computeOnGPU(int N, int K, double D, int tCount, double *tValues, Point *points, int *results)
 {
     cudaError_t err = cudaSuccess;
 
     int threadPerBlock = BLOCK_SIZE;
     int blocksPerGrid = (N + threadPerBlock - 1) / threadPerBlock;
-    Point *d_points;
+    Point *d_points = NULL;
     int *d_resutls = NULL;
+
     /*Allocating mem on gpu section*/
-    allocateMemDevice((void **)&d_resutls, CONSTRAINTS * tCount * sizeof(int)); // resutls == globalflags
+    allocateMemDevice((void **)&d_resutls, CONSTRAINTS * tCount * sizeof(int)); 
     allocateMemDevice((void **)&d_points, N * sizeof(Point));
     /*End allocate mem*/
 
@@ -140,11 +153,11 @@ int computeOnGPU(int N, int K, double D, int tCount, double *tValues, Point *poi
     /*for each tvalue we will send it to GPU to compute the data and save it on resutls array*/
     for (int i = 0; i < tCount; i++)
     {
-        calculateProximity<<<blocksPerGrid, threadPerBlock>>>(d_points, N, tValues[i], D, d_resutls, K, i);
+        checkProximity<<<blocksPerGrid, threadPerBlock>>>(d_points, N, tValues[i], D, d_resutls, K, i);
         err = cudaGetLastError();
         if (err != cudaSuccess)
         {
-            fprintf(stderr, "Failed to lanch calculateProximity kernel. -%s\n", cudaGetErrorString(err));
+            fprintf(stderr, "Failed to lanch checkProximity kernel. -%s\n", cudaGetErrorString(err));
             exit(EXIT_FAILURE);
         }
     }
