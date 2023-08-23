@@ -29,18 +29,16 @@ __device__ double calcDistance(const Point p1, const Point p2, double t)
  * @param results Array of results.
  * @param pointId A point that satisfies the condition.
  */
-__device__ void updateProximitePoints(int startingIndex, int *resutls, int pointId)
+__device__ void updateResults(int startingIndex, int *results, int pointId)
 {
     for (int i = 0; i < CONSTRAINTS; i++)
     {
         int index = startingIndex * CONSTRAINTS + i;
-        int currentVal = resutls[index];
+        int currentVal = results[index];
+
         if (currentVal == -1)
         {
-            int expected = -1;
-            int desired = pointId;
-
-            if (atomicCAS(&resutls[index], expected, desired) == expected) /*Fill the resutls[index] in atomic way*/
+            if (atomicCAS(&results[index], currentVal, pointId) == currentVal) 
             {
                 return;
             }
@@ -58,30 +56,31 @@ __device__ void updateProximitePoints(int startingIndex, int *resutls, int point
  * @param K Need at least K points that fulfill the condition of Proximity Criteria.
  * @param tIndex The current t in the for loop.
  */
-__global__ void checkProximity(Point *d_points, int N, double tValue, double D, int *d_resutls, double K, int tIndex)
+__global__ void checkProximity(Point *d_points, int N, double tValue, double D, int *d_results, double K, int tIndex)
 {
+    // current pid
     int pid = blockDim.x * blockIdx.x + threadIdx.x;
 
-    if (pid >= N || d_resutls[tIndex * CONSTRAINTS + CONSTRAINTS - 1] != -1)
-    {
-        return;
-    }
-
     int counter = 0;
-    int currentPoint = d_points[pid];
-
-    for (int i = 0; i < N && counter < K; i++)
+    if (pid < N)
     {
-        int checkedPoint = d_points[i];
-        if (checkedPoint.id != currentPoint.id && calcDistance(currentPoint, checkedPoint, tValue) < D)
+        for (int i = 0; i < N; i++)
         {
-            counter++;
-        }
-    }
 
-    if (counter == K)
-    {
-        updateProximitePoints(tIndex, d_resutls, currentPoint.id);
+            if (atomicAdd(&d_results[tIndex * CONSTRAINTS + CONSTRAINTS - 1], 0) != -1)           
+                return;
+            
+
+            if (d_points[i].id != d_points[pid].id && calcDistance(d_points[pid], d_points[i], tValue) < D)
+            {
+                counter++;
+                if (counter == K)
+                {
+                    updateResults(tIndex, d_results, d_points[pid].id); 
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -138,22 +137,22 @@ int computeOnGPU(int N, int K, double D, int tCount, double *tValues, Point *poi
     int threadPerBlock = BLOCK_SIZE;
     int blocksPerGrid = (N + threadPerBlock - 1) / threadPerBlock;
     Point *d_points = NULL;
-    int *d_resutls = NULL;
+    int *d_results = NULL;
 
     /*Allocating mem on gpu section*/
-    allocateMemDevice((void **)&d_resutls, CONSTRAINTS * tCount * sizeof(int)); 
+    allocateMemDevice((void **)&d_results, CONSTRAINTS * tCount * sizeof(int)); 
     allocateMemDevice((void **)&d_points, N * sizeof(Point));
     /*End allocate mem*/
 
     /*Copy mem to Device section*/
     copyMemory(d_points, points, N * sizeof(Point), cudaMemcpyHostToDevice);
-    copyMemory(d_resutls, results, tCount * CONSTRAINTS * sizeof(int), cudaMemcpyHostToDevice);
+    copyMemory(d_results, results, tCount * CONSTRAINTS * sizeof(int), cudaMemcpyHostToDevice);
     /*End copy mem to Device*/
 
-    /*for each tvalue we will send it to GPU to compute the data and save it on resutls array*/
+    /*for each tvalue we will send it to GPU to compute the data and save it on results array*/
     for (int i = 0; i < tCount; i++)
     {
-        checkProximity<<<blocksPerGrid, threadPerBlock>>>(d_points, N, tValues[i], D, d_resutls, K, i);
+        checkProximity<<<blocksPerGrid, threadPerBlock>>>(d_points, N, tValues[i], D, d_results, K, i);
         err = cudaGetLastError();
         if (err != cudaSuccess)
         {
@@ -162,7 +161,7 @@ int computeOnGPU(int N, int K, double D, int tCount, double *tValues, Point *poi
         }
     }
 
-    err = cudaMemcpy(results, d_resutls, tCount * CONSTRAINTS * sizeof(int), cudaMemcpyDeviceToHost);
+    err = cudaMemcpy(results, d_results, tCount * CONSTRAINTS * sizeof(int), cudaMemcpyDeviceToHost);
     if (err != cudaSuccess)
     {
         fprintf(stderr, "Failed to copy data. -%s\n", cudaGetErrorString(err));
@@ -180,7 +179,7 @@ int computeOnGPU(int N, int K, double D, int tCount, double *tValues, Point *poi
         fprintf(stderr, "Failed to free device data - %s\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
-    if (cudaFree(d_resutls) != cudaSuccess)
+    if (cudaFree(d_results) != cudaSuccess)
     {
         fprintf(stderr, "Failed to free device data - %s\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
