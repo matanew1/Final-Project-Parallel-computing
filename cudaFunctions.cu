@@ -14,7 +14,7 @@ __device__ double calcDistance(const Point *p1, const Point *p2, double *t)
 {
     // Calculate the x-coordinate of the first point at a given value of t.
     // x1 = ((x2 - x1) / 2) * sin(t * π / 2) + ((x2 + x1) / 2);
-    double x1 = ((p1->x2 - p1->x1) / 2) * __fsin((*t) * M_PI / 2) + ((p1->x2 + p1->x1) / 2);
+    double x1 = ((p1->x2 - p1->x1) / 2) * __sinf((*t) * M_PI / 2) + ((p1->x2 + p1->x1) / 2);
 
     // Calculate the y-coordinate of the first point based on the equation of a line.
     // y1 = a * x1 + b;
@@ -22,7 +22,7 @@ __device__ double calcDistance(const Point *p1, const Point *p2, double *t)
 
     // Calculate the x-coordinate of the second point at a given value of t.
     // x2 = ((x2 - x1) / 2) * sin(t * π / 2) + ((x2 + x1) / 2);
-    double x2 = ((p2->x2 - p2->x1) / 2) * __fsin((*t) * M_PI / 2) + ((p2->x2 + p2->x1) / 2);
+    double x2 = ((p2->x2 - p2->x1) / 2) * __sinf((*t) * M_PI / 2) + ((p2->x2 + p2->x1) / 2);
 
     // Calculate the y-coordinate of the second point based on the equation of a line.
     // y2 = a * x2 + b;
