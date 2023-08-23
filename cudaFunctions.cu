@@ -63,9 +63,9 @@ __device__ void updateProximitePoints(int startingIndex, int *proximites, int po
 */
 __global__ void calculateProximity(Point *d_points, int N, double tValue, double D, int *d_proximities, double K, int tIndex)
 {
-    int tid = blockDim.x * blockIdx.x + threadIdx.x;
+    int pid = blockDim.x * blockIdx.x + threadIdx.x;
     int counter = 0;
-    if (tid < N && atomicAdd(&d_proximities[tIndex * CONSTRAINTS + CONSTRAINTS - 1], 0) == -1)
+    if (pid < N && atomicAdd(&d_proximities[tIndex * CONSTRAINTS + CONSTRAINTS - 1], 0) == -1)
     {
         for (int i = 0; i < N; i++)
         {
@@ -75,13 +75,13 @@ __global__ void calculateProximity(Point *d_points, int N, double tValue, double
                 return;
             }
 
-            if (d_points[i].id != d_points[tid].id && calcDistance(d_points[tid], d_points[i], tValue) < D)
+            if (d_points[i].id != d_points[pid].id && calcDistance(d_points[pid], d_points[i], tValue) < D)
             {
                 counter++;
                 if (counter == K)
                 {
 
-                    int pointId = d_points[tid].id;                        /*This point is proximity*/
+                    int pointId = d_points[pid].id;                        /*This point is proximity*/
                     updateProximitePoints(tIndex, d_proximities, pointId); /*0,proximites,point that have 3 points*/
                     break;
                 }
