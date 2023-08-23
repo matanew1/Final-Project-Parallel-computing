@@ -79,9 +79,9 @@ __global__ void checkProximity(Point *d_points, int N, double tValue, double D, 
         // Loop through all points to check proximity
         for (int i = 0; i < N; i++)
         {
-            // Check if the proximity results have been flagged as complete
+            // Check if the proximity results at specific t have been flagged as complete
             if (atomicAdd(&d_results[tIdx * CONSTRAINTS + CONSTRAINTS - 1], 0) != -1)
-                return; // If the results are complete, exit the function immediately
+                return; 
 
             // Compare the ID of the current point and the checked point
             Point current = d_points[pid];
@@ -187,13 +187,11 @@ int computeOnGPU(int N, int K, double D, int tCount, double *tValues, Point *poi
         fprintf(stderr, "Failed to copy data. -%s\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
-
     if (err != cudaSuccess)
     {
         fprintf(stderr, "Failed to copy data. -%s\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
-
     if (cudaFree(d_points) != cudaSuccess)
     {
         fprintf(stderr, "Failed to free device data - %s\n", cudaGetErrorString(err));
@@ -204,5 +202,6 @@ int computeOnGPU(int N, int K, double D, int tCount, double *tValues, Point *poi
         fprintf(stderr, "Failed to free device data - %s\n", cudaGetErrorString(err));
         exit(EXIT_FAILURE);
     }
+    
     return 0;
 }
