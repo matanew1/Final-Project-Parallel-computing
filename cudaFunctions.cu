@@ -25,15 +25,15 @@ __device__ double calcDistance(const Point p1, const Point p2, double t)
 
 /**
  * Update proximity points in an atomic manner.
- * @param startingIndex The current t-value in the round.
+ * @param tIdx The current t-value in the round.
  * @param results Array of results.
  * @param pointId A point that satisfies the condition.
  */
-__device__ void updateResults(int startingIndex, int *results, int pointId)
+__device__ void updateResults(int tIdx, int *results, int pointId)
 {
     for (int i = 0; i < CONSTRAINTS; i++)
     {
-        int index = startingIndex * CONSTRAINTS + i;
+        int index = tIdx * CONSTRAINTS + i;
         int currentVal = results[index];
 
         if (currentVal == -1)
