@@ -2,25 +2,35 @@
 #include <helper_cuda.h>
 #include "myProto.h"
 
-__device__ double calculateSin(double t) {
-    double angle = t * M_PI / 2;
-    return __sinf(angle); // Using hardware-accelerated sin
-}
+/**
+ * Calculate the distance between two points at a given t value.
+ *
+ * @param p1  Pointer to the first point
+ * @param p2  Pointer to the second point
+ * @param t   Pointer to the t value
+ * @return    The calculated distance
+ */
+__device__ double calcDistance(const Point *p1, const Point *p2, double *t)
+{
+    // Calculate the x-coordinate of the first point at a given value of t.
+    // x1 = ((x2 - x1) / 2) * sin(t * π / 2) + ((x2 + x1) / 2);
+    double x1 = ((p1->x2 - p1->x1) / 2) * sin((*t) * M_PI / 2) + ((p1->x2 + p1->x1) / 2);
 
-__device__ double calculateX(double x1, double x2, double t) {
-    double sinValue = calculateSin(t); // Calculate sin only once
-    return ((x2 - x1) / 2) * sinValue + ((x2 + x1) / 2);
-}
-
-__device__ bool isProximityCriteriaMet(const Point *p1, const Point *p2, double t, double D) {
-    double x1 = calculateX(p1->x1, p1->x2, t);
+    // Calculate the y-coordinate of the first point based on the equation of a line.
+    // y1 = a * x1 + b;
     double y1 = p1->a * x1 + p1->b;
-    
-    double x2 = calculateX(p2->x1, p2->x2, t);
+
+    // Calculate the x-coordinate of the second point at a given value of t.
+    // x2 = ((x2 - x1) / 2) * sin(t * π / 2) + ((x2 + x1) / 2);
+    double x2 = ((p2->x2 - p2->x1) / 2) * sin((*t) * M_PI / 2) + ((p2->x2 + p2->x1) / 2);
+
+    // Calculate the y-coordinate of the second point based on the equation of a line.
+    // y2 = a * x2 + b;
     double y2 = p2->a * x2 + p2->b;
 
-    double dx = x2 - x1; // Calculate dx and dy only once
-    double dy = y2 - y1;
+    // Calculate the distance between the two points using the Euclidean distance formula.
+    // distance = sqrt((x2 - x1)^2 + (y2 - y1)^2);
+    double distance = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
 
     double distanceSquared = dx * dx + dy * dy; // Avoiding square root for Euclidean distance check
 
@@ -39,10 +49,27 @@ __global__ void checkProximityCriteria(Point *points, double *tValues, const int
     for (int i = 0; i < N; i++) {
         int count = 0; // Initialize count inside the loop
 
-        for (int j = 0; j < N; j++) {
-            if (i != j && isProximityCriteriaMet(&points[i], &points[j], t, D)) {
-                if (++count == K) { // Increment and check in one step
-                    pointId = points[i].id;
+        // Check proximity for each point with all other points.
+        for (int j = 0; j < N; j++)
+        {
+            // Check if the points are different and meet the proximity criteria.
+            if (i != j && isProximityCriteriaMet(&points[i], &points[j], &t, D))
+            {
+                count++;
+
+                // Check if the count of proximity points reaches the desired value K.
+                if (count == K)
+                {
+                    printf("Found proximity criteria point\n");
+                    // Get the ID of the proximity point.
+                    int proximityPointId = points[i].id;
+
+                    printf("Start update resutls\n");
+                    // Update the results array with the proximity point ID.
+                    updateResults(idx, results, proximityPointId);
+                    printf("End update resutls\n");
+
+                    // Break out of the inner loop since K proximity points have been found.
                     break;
                 }
             }
@@ -79,7 +106,22 @@ void computeOnGPU(int N, int K, double D, int tCountSize, double *myTValues, Poi
     copyHostToDevice(d_tValues, myTValues, tCountSize * sizeof(double), cudaMemcpyHostToDevice);
     copyHostToDevice(d_results, results, CONSTRAINTS * tCountSize * sizeof(int), cudaMemcpyHostToDevice);
 
-    checkProximityCriteria<<<blocksPerGrid, threadPerBlock>>>(d_points, d_tValues, tCountSize, N, K, D, d_results);
+    // Allocate device memory for points, tValues, and results.
+    allocateDeviceMemory((void **)&d_points, (*N) * sizeof(Point));
+    allocateDeviceMemory((void **)&d_tValues, (*tCountSize) * sizeof(double));
+    allocateDeviceMemory((void **)&d_results, CONSTRAINTS * (*tCountSize) * sizeof(int));
+    printf("Allocated device memory for points, tValues, and results\n");
+
+    // Copy points, tValues, and results from the host to the device.
+    copyHostToDevice(d_points, points, (*N) * sizeof(Point), cudaMemcpyHostToDevice);
+    copyHostToDevice(d_tValues, myTValues, (*tCountSize) * sizeof(double), cudaMemcpyHostToDevice);
+    copyHostToDevice(d_results, results, CONSTRAINTS * (*tCountSize) * sizeof(int), cudaMemcpyHostToDevice);
+    printf("Copy host memory to device for points, tValues, and results\n");
+
+    // Launch the checkProximityCriteria kernel on the device.
+    checkProximityCriteria<<<blocksPerGrid, threadPerBlock>>>(d_points, d_tValues, *tCountSize, *N, *K, *D, d_results);
+
+    // Check if there was an error launching the kernel.
     err = cudaGetLastError();
     if (err != cudaSuccess) {
         fprintf(stderr, "Failed to launch kernel (error code %s)!\n", cudaGetErrorString(err));
