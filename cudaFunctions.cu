@@ -110,7 +110,7 @@ __global__ void checkProximity(Point *d_points, int N, double tValue, double D, 
  * @param ptr Pointer to the memory to be allocated.
  * @param size Size of the memory to allocate (in bytes).
  */
-void allocateMemDevice(void **ptr, size_t size)
+void allocateMemoryDevice(void **ptr, size_t size)
 {
     cudaError_t err = cudaMalloc(ptr, size); 
     if (err != cudaSuccess)
@@ -127,7 +127,7 @@ void allocateMemDevice(void **ptr, size_t size)
  * @param size How much data needs to be copied (in bytes).
  * @param direction Which direction to copy the memory (host->device) or (device->host).
  */
-void copyMemory(void *dest, void *src, size_t size, cudaMemcpyKind direction)
+void copyMemoryHostToDevice(void *dest, void *src, size_t size, cudaMemcpyKind direction)
 {
     /*Copy mem from device to host OR host to device depending on the direction*/
     cudaError_t err = cudaMemcpy(dest, src, size, direction);
@@ -159,19 +159,20 @@ int computeOnGPU(int N, int K, double D, int tCount, double *tValues, Point *poi
     int *d_results = NULL;
 
     /*Allocating mem on gpu section*/
-    allocateMemDevice((void **)&d_results, CONSTRAINTS * tCount * sizeof(int)); 
-    allocateMemDevice((void **)&d_points, N * sizeof(Point));
+    allocateMemoryDevice((void **)&d_results, CONSTRAINTS * tCount * sizeof(int)); 
+    allocateMemoryDevice((void **)&d_points, N * sizeof(Point));
     /*End allocate mem*/
 
     /*Copy mem to Device section*/
-    copyMemory(d_points, points, N * sizeof(Point), cudaMemcpyHostToDevice);
-    copyMemory(d_results, results, tCount * CONSTRAINTS * sizeof(int), cudaMemcpyHostToDevice);
+    copyMemoryHostToDevice(d_points, points, N * sizeof(Point), cudaMemcpyHostToDevice);
+    copyMemoryHostToDevice(d_results, results, tCount * CONSTRAINTS * sizeof(int), cudaMemcpyHostToDevice);
     /*End copy mem to Device*/
 
     /*for each tvalue we will send it to GPU to compute the data and save it on results array*/
     for (int i = 0; i < tCount; i++)
     {
         checkProximity<<<blocksPerGrid, threadPerBlock>>>(d_points, N, tValues[i], D, d_results, K, i);
+        
         err = cudaGetLastError();
         if (err != cudaSuccess)
         {
