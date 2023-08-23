@@ -14,7 +14,7 @@ __device__ double calcDistance(const Point *p1, const Point *p2, double *t)
 {
     // Calculate the x-coordinate of the first point at a given value of t.
     // x1 = ((x2 - x1) / 2) * sin(t * π / 2) + ((x2 + x1) / 2);
-    double x1 = ((p1->x2 - p1->x1) / 2) * sin((*t) * M_PI / 2) + ((p1->x2 + p1->x1) / 2);
+    double x1 = ((p1->x2 - p1->x1) / 2) * __fsin((*t) * M_PI / 2) + ((p1->x2 + p1->x1) / 2);
 
     // Calculate the y-coordinate of the first point based on the equation of a line.
     // y1 = a * x1 + b;
@@ -22,7 +22,7 @@ __device__ double calcDistance(const Point *p1, const Point *p2, double *t)
 
     // Calculate the x-coordinate of the second point at a given value of t.
     // x2 = ((x2 - x1) / 2) * sin(t * π / 2) + ((x2 + x1) / 2);
-    double x2 = ((p2->x2 - p2->x1) / 2) * sin((*t) * M_PI / 2) + ((p2->x2 + p2->x1) / 2);
+    double x2 = ((p2->x2 - p2->x1) / 2) * __fsin((*t) * M_PI / 2) + ((p2->x2 + p2->x1) / 2);
 
     // Calculate the y-coordinate of the second point based on the equation of a line.
     // y2 = a * x2 + b;
@@ -43,48 +43,49 @@ __global__ void checkProximityCriteria(Point *points, double *tValues, const int
         return;
 
     double t = tValues[idx];
+    __shared__ int sharedResults[BLOCK_SIZE * CONSTRAINTS];
+
+    for (int j = threadIdx.x; j < CONSTRAINTS; j += blockDim.x) {
+        sharedResults[threadIdx.x * CONSTRAINTS + j] = -1;
+    }
+
+    __syncthreads();
 
     int pointId = -1;
 
-    for (int i = 0; i < N; i++) {
-        int count = 0; // Initialize count inside the loop
+    for (int i = threadIdx.x; i < N; i += blockDim.x) {
+        int count = 0;
 
-        // Check proximity for each point with all other points.
-        for (int j = 0; j < N; j++)
-        {
-            // Check if the points are different and meet the proximity criteria.
-            if (i != j && isProximityCriteriaMet(&points[i], &points[j], &t, D))
-            {
+        for (int j = 0; j < N; j++) {
+            if (i != j && isProximityCriteriaMet(&points[i], &points[j], &t, D)) {
                 count++;
 
-                // Check if the count of proximity points reaches the desired value K.
-                if (count == K)
-                {
-                    printf("Found proximity criteria point\n");
-                    // Get the ID of the proximity point.
-                    int proximityPointId = points[i].id;
-
-                    printf("Start update resutls\n");
-                    // Update the results array with the proximity point ID.
-                    updateResults(idx, results, proximityPointId);
-                    printf("End update resutls\n");
-
-                    // Break out of the inner loop since K proximity points have been found.
+                if (count == K) {
+                    pointId = points[i].id;
                     break;
                 }
             }
         }
 
-        if (pointId != -1)
+        if (pointId != -1) {
             break;
+        }
     }
 
-    for (int j = 0; j < CONSTRAINTS; j++) {
-        int targetIndex = idx * CONSTRAINTS + j;
+    // Update sharedResults
+    for (int j = threadIdx.x; j < CONSTRAINTS; j += blockDim.x) {
+        if (pointId != -1 && sharedResults[j] == -1) {
+            sharedResults[j] = pointId;
+        }
+    }
 
-        if (results[targetIndex] == -1) {
-            atomicExch(&results[targetIndex], pointId);
-            return;
+    __syncthreads();
+
+    // Have one thread per block write sharedResults to global results
+    if (threadIdx.x == 0) {
+        for (int j = 0; j < CONSTRAINTS; j++) {
+            int targetIndex = idx * CONSTRAINTS + j;
+            results[targetIndex] = sharedResults[j];
         }
     }
 }
